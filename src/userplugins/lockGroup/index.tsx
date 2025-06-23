@@ -78,7 +78,26 @@ function interceptAddMember(originalMethod: any) {
                 // Vérifier si c'est un groupe DM et si l'utilisateur actuel est propriétaire
                 if (channel && channel.type === 3 && channel.ownerId === currentUserId) {
                     const channelName = channel.name || "Groupe sans nom";
-                    log(`🔒 Détection d'ajout dans "${channelName}" - Auto-kick programmé`);
+
+                    // Permettre au propriétaire d'ajouter des membres
+                    debugLog(`✅ Propriétaire autorisé à ajouter des membres dans "${channelName}"`);
+
+                    if (settings.store.showNotifications && settings.store.debugMode) {
+                        showNotification({
+                            title: "🔒 LockGroup - Ajout autorisé",
+                            body: `Propriétaire autorisé à ajouter un membre dans "${channelName}"`,
+                            icon: undefined
+                        });
+                    }
+
+                    // Laisser passer la requête du propriétaire
+                    return originalMethod.apply(this, args);
+                }
+
+                // Si ce n'est pas le propriétaire, programmer le kick
+                if (channel && channel.type === 3) {
+                    const channelName = channel.name || "Groupe sans nom";
+                    log(`🚫 Ajout non autorisé détecté dans "${channelName}" - Auto-kick programmé`);
 
                     // Programmer le kick après 100ms
                     setTimeout(async () => {
@@ -94,7 +113,7 @@ function interceptAddMember(originalMethod: any) {
                             if (settings.store.showNotifications) {
                                 showNotification({
                                     title: "🔒 LockGroup - Auto-kick",
-                                    body: `Membre automatiquement retiré du groupe verrouillé "${channelName}"`,
+                                    body: `Membre non autorisé retiré du groupe verrouillé "${channelName}"`,
                                     icon: undefined
                                 });
                             }
@@ -105,8 +124,8 @@ function interceptAddMember(originalMethod: any) {
 
                     if (settings.store.showNotifications) {
                         showNotification({
-                            title: "🔒 LockGroup - Ajout détecté",
-                            body: `Ajout détecté dans "${channelName}" - Auto-kick en cours...`,
+                            title: "🔒 LockGroup - Ajout non autorisé",
+                            body: `Ajout non autorisé détecté dans "${channelName}" - Auto-kick en cours...`,
                             icon: undefined
                         });
                     }
@@ -274,31 +293,48 @@ export default definePlugin({
                     if (channel && channel.type === 3 && channel.ownerId === currentUserId) {
                         const channelName = channel.name || "Groupe sans nom";
                         const addedUserId = message.mentions?.[0]?.id;
+                        const addedByUserId = message.author?.id;
 
                         log(`📨 Message d'ajout détecté dans "${channelName}"`);
+                        debugLog(`Ajouté par: ${addedByUserId}, Utilisateur ajouté: ${addedUserId}, Propriétaire: ${currentUserId}`);
 
-                        if (addedUserId) {
-                            debugLog(`Utilisateur ajouté via message: ${addedUserId}`);
+                        // Si l'ajout a été fait par le propriétaire, ne pas kicker
+                        if (addedByUserId === currentUserId) {
+                            debugLog(`✅ Ajout fait par le propriétaire - Autorisé`);
 
-                            // Kick de sécurité au cas où l'interception REST n'aurait pas fonctionné
+                            if (settings.store.showNotifications && settings.store.debugMode) {
+                                showNotification({
+                                    title: "🔒 LockGroup - Ajout propriétaire",
+                                    body: `Membre ajouté par le propriétaire dans "${channelName}" - Autorisé`,
+                                    icon: undefined
+                                });
+                            }
+                            return;
+                        }
+
+                        // Si c'est quelqu'un d'autre qui a ajouté, kicker
+                        if (addedUserId && addedByUserId !== currentUserId) {
+                            debugLog(`🚫 Ajout non autorisé par ${addedByUserId} - Kick programmé`);
+
+                            // Kick de sécurité pour les ajouts non autorisés
                             setTimeout(async () => {
                                 try {
                                     await RestAPI.del({
                                         url: `/channels/${channelId}/recipients/${addedUserId}`
                                     });
-                                    log(`🔒 Kick de sécurité effectué pour ${addedUserId}`);
+                                    log(`🔒 Kick de sécurité effectué pour ${addedUserId} (ajouté par ${addedByUserId})`);
                                 } catch (error) {
                                     debugLog(`Erreur kick de sécurité: ${error}`);
                                 }
                             }, 150);
-                        }
 
-                        if (settings.store.showNotifications) {
-                            showNotification({
-                                title: "🔒 LockGroup - Membre ajouté",
-                                body: `Membre ajouté dans "${channelName}" puis automatiquement retiré`,
-                                icon: undefined
-                            });
+                            if (settings.store.showNotifications) {
+                                showNotification({
+                                    title: "🔒 LockGroup - Ajout non autorisé",
+                                    body: `Membre ajouté sans autorisation dans "${channelName}" puis retiré`,
+                                    icon: undefined
+                                });
+                            }
                         }
                     }
                 }
