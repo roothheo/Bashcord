@@ -136,7 +136,7 @@ async function runUpdateCheck() {
         }
 
         notify({
-            title: "A Equicord update is available!",
+            title: "A Bashcord update is available!",
             body: "Click here to view the update",
             onClick: openUpdaterModal!
         });
