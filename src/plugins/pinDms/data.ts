@@ -40,15 +40,6 @@ export async function init() {
 
     currentUserCategories = settings.store.userBasedCategoryList[userId] ??= [];
 
-    // Créer automatiquement la catégorie GRP et déplacer les groupes seulement si l'option est activée
-    if (settings.store.autoGroupInCategory) {
-        // Créer automatiquement la catégorie GRP si elle n'existe pas
-        ensureGroupCategory();
-
-        // Déplacer automatiquement tous les groupes vers la catégorie GRP
-        autoMoveGroupsToCategory();
-    }
-
     forceUpdateDms?.();
 }
 
@@ -90,18 +81,6 @@ export function handleAutoGroupOptionChange(enabled: boolean) {
 
 export function usePinnedDms() {
     forceUpdateDms = useForceUpdater();
-
-    // Surveiller les changements de l'option autoGroupInCategory
-    const [prevAutoGroup, setPrevAutoGroup] = React.useState(settings.store.autoGroupInCategory);
-
-    React.useEffect(() => {
-        const currentAutoGroup = settings.store.autoGroupInCategory;
-        if (prevAutoGroup !== currentAutoGroup) {
-            handleAutoGroupOptionChange(currentAutoGroup);
-            setPrevAutoGroup(currentAutoGroup);
-        }
-    }, [settings.store.autoGroupInCategory, prevAutoGroup]);
-
     settings.use(["pinOrder", "canCollapseDmSection", "dmSectionCollapsed", "autoGroupInCategory", "userBasedCategoryList"]);
 }
 
@@ -171,18 +150,6 @@ export function addChannelToCategory(channelId: string, categoryId: string) {
 
     if (category.channels.includes(channelId)) return;
 
-    // Si c'est un groupe et que l'option autoGroupInCategory est activée, s'assurer qu'il va dans la catégorie GRP
-    if (isGroupChannel(channelId) && settings.store.autoGroupInCategory) {
-        const groupCategory = ensureGroupCategory();
-        if (categoryId !== groupCategory.id) {
-            // Forcer le déplacement vers la catégorie GRP
-            if (!groupCategory.channels.includes(channelId)) {
-                groupCategory.channels.push(channelId);
-            }
-            return;
-        }
-    }
-
     category.channels.push(channelId);
 }
 
@@ -196,12 +163,6 @@ export function removeChannelFromCategory(channelId: string) {
 export function removeCategory(categoryId: string) {
     const categoryIndex = currentUserCategories.findIndex(c => c.id === categoryId);
     if (categoryIndex === -1) return;
-
-    // Empêcher la suppression de la catégorie GRP seulement si l'option autoGroupInCategory est activée
-    const category = currentUserCategories[categoryIndex];
-    if (category.name === "GRP" && settings.store.autoGroupInCategory) {
-        return;
-    }
 
     currentUserCategories.splice(categoryIndex, 1);
 }

@@ -60,7 +60,7 @@ export const settings = definePluginSettings({
     autoGroupInCategory: {
         type: OptionType.BOOLEAN,
         description: "Automatically place group chats in GRP category",
-        default: true
+        default: false
     },
     userBasedCategoryList: {
         type: OptionType.CUSTOM,
@@ -171,23 +171,7 @@ export default definePlugin({
     startAt: StartAt.WebpackReady,
     start: init,
     flux: {
-        CONNECTION_OPEN: init,
-        CHANNEL_CREATE: (payload: { channel: Channel; }) => {
-            // Surveiller les nouveaux canaux et ranger automatiquement les groupes si l'option est activée
-            if (payload.channel?.type === 3 && settings.store.autoGroupInCategory) { // GROUP_DM
-                setTimeout(() => {
-                    autoMoveGroupsToCategory();
-                }, 100); // Petit délai pour s'assurer que le canal est bien ajouté
-            }
-        },
-        CHANNEL_UPDATES: () => {
-            // Vérifier périodiquement que tous les groupes sont dans la bonne catégorie si l'option est activée
-            if (settings.store.autoGroupInCategory) {
-                setTimeout(() => {
-                    autoMoveGroupsToCategory();
-                }, 100);
-            }
-        }
+        CONNECTION_OPEN: init
     },
 
     usePinnedDms,
@@ -295,11 +279,10 @@ export default definePlugin({
                                 id="vc-pindms-edit-category"
                                 label="Edit Category"
                                 action={() => openCategoryModal(category.id, null)}
-                                disabled={category.name === "GRP"}
                             />
 
                             {
-                                canMoveCategory(category.id) && category.name !== "GRP" && (
+                                canMoveCategory(category.id) && (
                                     <>
                                         {
                                             canMoveCategoryInDirection(category.id, -1) && <Menu.MenuItem
@@ -320,17 +303,13 @@ export default definePlugin({
                                 )
                             }
 
-                            {category.name !== "GRP" && (
-                                <>
-                                    <Menu.MenuSeparator />
-                                    <Menu.MenuItem
-                                        id="vc-pindms-delete-category"
-                                        color="danger"
-                                        label="Delete Category"
-                                        action={() => removeCategory(category.id)}
-                                    />
-                                </>
-                            )}
+                            <Menu.MenuSeparator />
+                            <Menu.MenuItem
+                                id="vc-pindms-delete-category"
+                                color="danger"
+                                label="Delete Category"
+                                action={() => removeCategory(category.id)}
+                            />
 
                         </Menu.Menu>
                     ));
