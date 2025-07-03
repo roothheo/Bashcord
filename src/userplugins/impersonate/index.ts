@@ -11,6 +11,8 @@ import { Logger } from "@utils/Logger";
 import definePlugin from "@utils/types";
 import { FluxDispatcher, UserStore } from "@webpack/common";
 
+const logger = new Logger("Impersonate");
+
 export default definePlugin({
     name: "Impersonate",
     description: "Impersonate a user and have them send a \"message\"",
@@ -55,8 +57,7 @@ export default definePlugin({
 
                     const user = UserStore.getUser(args[0].value);
 
-                    new Logger("Nigga").log(args);
-
+                    logger.log(`Impersonating user: ${user.username} (${user.id}) in channel: ${channel.value}`);
 
                     if (delay) {
                         FluxDispatcher.dispatch({

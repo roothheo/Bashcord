@@ -6,7 +6,7 @@
 
 > **Bashcord** est un fork ultra-personnalisé d'[Equicord](https://github.com/Equicord/Equicord) avec des plugins exclusifs développés par **Bash** pour une expérience Discord révolutionnaire ! 🎯
 
-## ✨ **Pourquoi Bashcord ?**
+##  **Pourquoi Bashcord ?**
 
 - 🎨 **Interface épurée** et moderne
 - ⚡ **Performance optimisée** pour les power users
@@ -152,11 +152,11 @@ export default definePlugin({
     name: "MonPlugin",
     description: "Description de mon plugin",
     authors: [{ name: "MonNom", id: 123456789n }],
-    
+
     start() {
         console.log("🚀 Plugin démarré !");
     },
-    
+
     stop() {
         console.log("🛑 Plugin arrêté !");
     }
