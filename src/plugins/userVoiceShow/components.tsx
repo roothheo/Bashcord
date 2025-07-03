@@ -23,6 +23,7 @@ const VoiceStateStore = findStoreLazy("VoiceStateStore");
 const UserSummaryItem = findComponentByCodeLazy("defaultRenderUser", "showDefaultAvatarsForNullUsers");
 const Avatar = findComponentByCodeLazy(".status)/2):0");
 const GroupDMAvatars = findComponentByCodeLazy("frontSrc:", "getAvatarURL");
+const AvatarStyles = findByPropsLazy("moreUsers", "emptyUser", "avatarContainer", "clickableAvatar");
 
 const ActionButtonClasses = findByPropsLazy("actionButton", "highlight");
 
@@ -150,6 +151,15 @@ function VoiceChannelTooltip({ channel, isLocked }: VoiceChannelTooltipProps) {
                     renderIcon={false}
                     max={13}
                     size={18}
+                    renderUser={(user: any) => (
+                        <img
+                            className={AvatarStyles.avatar}
+                            src={user.getAvatarURL(undefined, 80, true)}
+                            alt={user.username}
+                            title={user.username}
+                            style={{ width: "18px", height: "18px" }}
+                        />
+                    )}
                 />
             </div>
         </>

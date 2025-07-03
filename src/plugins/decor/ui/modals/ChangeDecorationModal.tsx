@@ -11,7 +11,7 @@ import { Margins } from "@utils/margins";
 import { classes, copyWithToast } from "@utils/misc";
 import { closeAllModals, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalProps, ModalRoot, ModalSize, openModal } from "@utils/modal";
 import { Queue } from "@utils/Queue";
-import { findComponentByCodeLazy } from "@webpack";
+import { findComponentByCodeLazy, findByPropsLazy } from "@webpack";
 import { Alerts, Button, FluxDispatcher, Forms, GuildStore, NavigationRouter, Parser, Text, Tooltip, useEffect, UserStore, UserUtils, useState } from "@webpack/common";
 import { User } from "discord-types/general";
 
@@ -31,6 +31,7 @@ import { openCreateDecorationModal } from "./CreateDecorationModal";
 import { openGuidelinesModal } from "./GuidelinesModal";
 
 const UserSummaryItem = findComponentByCodeLazy("defaultRenderUser", "showDefaultAvatarsForNullUsers");
+const AvatarStyles = findByPropsLazy("moreUsers", "emptyUser", "avatarContainer", "clickableAvatar");
 
 function usePresets() {
     const [presets, setPresets] = useState<Preset[]>([]);
@@ -83,6 +84,15 @@ function SectionHeader({ section }: SectionHeaderProps) {
                 size={16}
                 showUserPopout
                 className={Margins.bottom8}
+                renderUser={(user: any) => (
+                    <img
+                        className={AvatarStyles.avatar}
+                        src={user.getAvatarURL(undefined, 80, true)}
+                        alt={user.username}
+                        title={user.username}
+                        style={{ width: "16px", height: "16px" }}
+                    />
+                )}
             />}
         </Flex>
         {hasSubtitle &&

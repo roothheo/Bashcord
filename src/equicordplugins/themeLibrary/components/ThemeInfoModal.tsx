@@ -12,7 +12,7 @@ import { Margins } from "@utils/margins";
 import { classes } from "@utils/misc";
 import { ModalContent, ModalFooter, ModalHeader, ModalRoot, ModalSize, openModal } from "@utils/modal";
 import type { PluginNative } from "@utils/types";
-import { findComponentByCodeLazy } from "@webpack";
+import { findComponentByCodeLazy, findByPropsLazy } from "@webpack";
 import { Button, Forms, Parser, React, showToast, Toasts } from "@webpack/common";
 
 import { Theme, ThemeInfoModalProps } from "../types";
@@ -21,6 +21,7 @@ import { logger } from "./ThemeTab";
 
 const Native = VencordNative.pluginHelpers.ThemeLibrary as PluginNative<typeof import("../native")>;
 const UserSummaryItem = findComponentByCodeLazy("defaultRenderUser", "showDefaultAvatarsForNullUsers");
+const AvatarStyles = findByPropsLazy("moreUsers", "emptyUser", "avatarContainer", "clickableAvatar");
 
 async function downloadTheme(themesDir: string, theme: Theme) {
     try {
@@ -65,6 +66,15 @@ export const ThemeInfoModal: React.FC<ThemeInfoModalProps> = ({ author, theme, .
                                 showDefaultAvatarsForNullUsers
                                 showUserPopout
                                 className={Margins.right8}
+                                renderUser={(user: any) => (
+                                    <img
+                                        className={AvatarStyles.avatar}
+                                        src={user.getAvatarURL(undefined, 80, true)}
+                                        alt={user.username}
+                                        title={user.username}
+                                        style={{ width: "32px", height: "32px" }}
+                                    />
+                                )}
                             />
                             <Forms.FormText style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {authors.map(author => author.username).join(", ")}

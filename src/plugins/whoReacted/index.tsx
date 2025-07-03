@@ -188,6 +188,14 @@ export default definePlugin({
                         showDefaultAvatarsForNullUsers
                         showUserPopout
                         renderMoreUsers={makeRenderMoreUsers(users)}
+                        renderUser={(user: User) => (
+                            <img
+                                className={AvatarStyles.avatar}
+                                src={user.getAvatarURL(ChannelStore.getChannel(message.channel_id)?.guild_id, 80, true)}
+                                alt={user.username}
+                                title={user.username}
+                            />
+                        )}
                     />
                 </div>
             </div>

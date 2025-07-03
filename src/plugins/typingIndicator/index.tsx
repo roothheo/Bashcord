@@ -23,13 +23,14 @@ import ErrorBoundary from "@components/ErrorBoundary";
 import { Devs } from "@utils/constants";
 import { getIntlMessage } from "@utils/discord";
 import definePlugin, { OptionType } from "@utils/types";
-import { findComponentByCodeLazy, findStoreLazy } from "@webpack";
+import { findComponentByCodeLazy, findStoreLazy, findByPropsLazy } from "@webpack";
 import { GuildMemberStore, RelationshipStore, SelectedChannelStore, Tooltip, UserStore, useStateFromStores } from "@webpack/common";
 
 import { buildSeveralUsers } from "../typingTweaks";
 
 const ThreeDots = findComponentByCodeLazy(".dots,", "dotRadius:");
 const UserSummaryItem = findComponentByCodeLazy("defaultRenderUser", "showDefaultAvatarsForNullUsers");
+const AvatarStyles = findByPropsLazy("moreUsers", "emptyUser", "avatarContainer", "clickableAvatar");
 const TypingStore = findStoreLazy("TypingStore");
 const UserGuildSettingsStore = findStoreLazy("UserGuildSettingsStore");
 
@@ -116,6 +117,15 @@ function TypingIndicator({ channelId, guildId }: { channelId: string; guildId: s
                                     showUserPopout
                                     size={16}
                                     className="vc-typing-indicator-avatars"
+                                    renderUser={(user: any) => (
+                                        <img
+                                            className={AvatarStyles.avatar}
+                                            src={user.getAvatarURL(guildId, 80, true)}
+                                            alt={user.username}
+                                            title={user.username}
+                                            style={{ width: "16px", height: "16px" }}
+                                        />
+                                    )}
                                 />
                             </div>
                         )}
