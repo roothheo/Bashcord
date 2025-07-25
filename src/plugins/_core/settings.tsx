@@ -81,12 +81,12 @@ export default definePlugin({
         return [
             {
                 section: SectionTypes.HEADER,
-                label: "Equicord",
+                label: "Bashcord",
                 className: "vc-settings-header"
             },
             {
                 section: "EquicordSettings",
-                label: "Equicord",
+                label: "Bashcord",
                 element: VencordTab,
                 className: "vc-settings"
             },
