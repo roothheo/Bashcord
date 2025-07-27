@@ -1,0 +1,102 @@
+/* Interface d'autocomplétion */
+.vc-autocompletion-interface {
+    position: fixed;
+    z-index: 9999;
+    background: var(--background-floating);
+    border: 1px solid var(--background-modifier-accent);
+    border-radius: 8px;
+    box-shadow: var(--elevation-stroke), var(--elevation-high);
+    padding: 8px 0;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: var(--font-primary);
+    backdrop-filter: blur(8px);
+}
+
+.vc-autocompletion-suggestions {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.vc-autocompletion-suggestion {
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--text-normal);
+    font-size: 14px;
+    border-radius: 4px;
+    margin: 2px 8px;
+    transition: background-color 0.1s ease;
+    position: relative;
+}
+
+.vc-autocompletion-suggestion:hover,
+.vc-autocompletion-suggestion.selected {
+    background: var(--background-modifier-hover);
+    color: var(--text-link);
+}
+
+.vc-autocompletion-suggestion.selected::before {
+    content: "→ ";
+    color: var(--text-link);
+    font-weight: bold;
+}
+
+.vc-autocompletion-help {
+    border-top: 1px solid var(--background-modifier-accent);
+    padding: 6px 16px;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--background-secondary-alt);
+    border-radius: 0 0 8px 8px;
+}
+
+/* Animation d'apparition */
+.vc-autocompletion-interface {
+    animation: slideUp 0.15s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive design pour mobile */
+@media (max-width: 768px) {
+    .vc-autocompletion-interface {
+        max-width: 90vw;
+        font-size: 12px;
+    }
+    
+    .vc-autocompletion-suggestion {
+        padding: 10px 14px;
+    }
+    
+    .vc-autocompletion-help {
+        font-size: 10px;
+        padding: 8px 14px;
+    }
+}
+
+/* Scrollbar personnalisée */
+.vc-autocompletion-suggestions::-webkit-scrollbar {
+    width: 6px;
+}
+
+.vc-autocompletion-suggestions::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.vc-autocompletion-suggestions::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-auto-thumb);
+    border-radius: 3px;
+}
+
+.vc-autocompletion-suggestions::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-auto-thumb-hover);
+} 

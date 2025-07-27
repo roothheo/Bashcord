@@ -7,7 +7,7 @@ on:
             - main
 env:
     FORCE_COLOR: true
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    GITHUB_TOKEN: ${{ github.token }}
     REPO: roothheo/bashcord
     USERNAME: GitHub-Actions
 
@@ -44,36 +44,48 @@ jobs:
             - name: Generate Equicord plugin list
               run: pnpm generateEquicordPluginJson dist/equicordplugins.json
 
-            # Adapte les chemins ci-dessous selon la structure de Bashcord
             - name: Collect files to be released
               run: |
                   cd dist
                   mkdir release
-                  cp browser/browser.* release || true
-                  cp Vencord.user.{js,js.LEGAL.txt} release || true
-                  cp *.{json,zip,asar} release || true
-                  cp desktop/* release || true
+
+                  cp browser/browser.* release
+                  cp Vencord.user.{js,js.LEGAL.txt} release
+
+                  # copy the plugin data jsons, the extension zips and the desktop/vesktop asars
+                  cp *.{json,zip,asar} release
+
+                  # legacy un-asared files
+                  cp desktop/* release
                   for file in equibop/*; do
                     filename=$(basename "$file")
-                    cp "$file" "release/equibop${filename^}" || true
+                    cp "$file" "release/equibop${filename^}"
                   done
-                  find release -size 0 -delete || true
-                  rm release/package.json || true
-                  rm release/*.map || true
 
-            - name: Upload Bashcord Release
+                  find release -size 0 -delete
+                  rm release/package.json
+                  rm release/*.map
+
+            - name: Create or Update Release
               if: ${{ github.ref_name == 'main' }}
+              env:
+                  GH_TOKEN: ${{ github.token }}
               run: |
+                  # Créer la release si elle n'existe pas
+                  gh release create latest --title "Bashcord Latest" --notes "Latest build of Bashcord - The other cutest Discord client mod but made by Ba\$h" --prerelease || true
+
+                  # Upload des fichiers
                   gh release upload latest --clobber dist/release/*
 
-            # Si tu veux pousser les plugins.json dans un autre repo, adapte REPO
-            - name: Upload Plugins JSON to Bashcord repo
+            - name: Upload Plugins JSON to Equibored repo
               run: |
                   git config --global user.name "GitHub-Actions"
                   git config --global user.email actions@github.com
                   git clone https://$USERNAME:$GITHUB_TOKEN@github.com/$REPO.git plugins
                   cd plugins
+
                   cp ../dist/release/*plugins.json .
                   git add -A
+
                   git commit -m "Plugins for https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
                   git push --force https://$USERNAME:$GITHUB_TOKEN@github.com/$REPO.git
