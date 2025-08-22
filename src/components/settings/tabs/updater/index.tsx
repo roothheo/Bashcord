@@ -202,7 +202,7 @@ function Updater() {
     };
 
     return (
-        <SettingsTab title="Equicord Updater">
+        <SettingsTab title="Bashcord Updater">
             <Forms.FormTitle tag="h5">Updater Settings</Forms.FormTitle>
             <Switch
                 value={settings.autoUpdate}

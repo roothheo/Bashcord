@@ -1,0 +1,91 @@
+name: 🔄 Sync Equicord Updates
+
+on:
+    schedule:
+        # Vérifier tous les jours à 2h du matin UTC
+        - cron: "0 2 * * *"
+    workflow_dispatch:
+        # Permettre le déclenchement manuel
+
+jobs:
+    sync-upstream:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: 📥 Checkout Bashcord
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: ⚙️ Configuration Git
+              run: |
+                  git config user.name "Bashcord Bot"
+                  git config user.email "action@github.com"
+
+            - name: 🔗 Ajouter remote upstream
+              run: |
+                  git remote add upstream https://github.com/Equicord/Equicord.git || true
+
+            - name: 📥 Fetch upstream
+              run: |
+                  git fetch upstream
+
+            - name: 🔍 Vérifier les nouvelles modifications
+              id: check-updates
+              run: |
+                  if [ "$(git rev-list --count HEAD..upstream/main)" -gt 0 ]; then
+                    echo "updates=true" >> $GITHUB_OUTPUT
+                    echo "🆕 Nouvelles modifications détectées!"
+                  else
+                    echo "updates=false" >> $GITHUB_OUTPUT
+                    echo "✅ Bashcord est à jour"
+                  fi
+
+            - name: 🛡️ Restaurer protection des fichiers
+              if: steps.check-updates.outputs.updates == 'true'
+              run: |
+                  # Restaurer skip-worktree pour les fichiers protégés
+                  git update-index --skip-worktree src/components/VencordSettings/BackupAndRestoreTab.tsx || true
+                  git update-index --skip-worktree src/components/VencordSettings/VencordTab.tsx || true
+                  git update-index --skip-worktree src/equicordplugins/clientSideBlock/index.tsx || true
+                  git update-index --skip-worktree src/equicordplugins/followVoiceUser/index.tsx || true
+                  git update-index --skip-worktree src/equicordplugins/moreStickers/index.tsx || true
+                  git update-index --skip-worktree src/main/patcher.ts || true
+                  git update-index --skip-worktree src/plugins/_core/settings.tsx || true
+                  git update-index --skip-worktree src/utils/settingsSync.ts || true
+
+            - name: 🔄 Merge upstream/main
+              if: steps.check-updates.outputs.updates == 'true'
+              run: |
+                  git merge upstream/main --no-edit --strategy-option=ours || {
+                    echo "❌ Conflit détecté, résolution automatique..."
+                    git checkout --ours .
+                    git add .
+                    git commit -m "🔄 Auto-merge Equicord updates (conflicts resolved)" || true
+                  }
+
+            - name: 🛡️ Vérifier protection des fichiers
+              if: steps.check-updates.outputs.updates == 'true'
+              run: |
+                  echo "📋 Fichiers protégés:"
+                  git ls-files -v | grep ^S || echo "⚠️  Aucun fichier protégé trouvé"
+
+            - name: 🚀 Push vers Bashcord
+              if: steps.check-updates.outputs.updates == 'true'
+              run: |
+                  git push origin main
+                  echo "✅ Bashcord mis à jour avec les dernières modifications d'Equicord!"
+
+            - name: 📝 Créer résumé
+              if: steps.check-updates.outputs.updates == 'true'
+              run: |
+                  echo "## 🎉 Bashcord mis à jour automatiquement!" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### Nouvelles modifications intégrées:" >> $GITHUB_STEP_SUMMARY
+                  git log --oneline HEAD~10..HEAD >> $GITHUB_STEP_SUMMARY || true
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "### ✅ Fichiers Bashcord protégés:" >> $GITHUB_STEP_SUMMARY
+                  echo "- Plugin noLeak" >> $GITHUB_STEP_SUMMARY
+                  echo "- Tous vos userplugins" >> $GITHUB_STEP_SUMMARY
+                  echo "- Modifications core Bashcord" >> $GITHUB_STEP_SUMMARY

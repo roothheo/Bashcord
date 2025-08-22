@@ -121,7 +121,7 @@ function CloudTab() {
     const settings = useSettings(["cloud.authenticated", "cloud.url"]);
 
     return (
-        <SettingsTab title="Equicord Cloud">
+        <SettingsTab title="Bashcord Cloud">
             <Forms.FormSection title="Cloud Settings" className={Margins.top16}>
                 <Forms.FormText variant="text-md/normal" className={Margins.bottom20}>
                     Equicord comes with the Vencord cloud integration that adds goodies like settings sync across devices.

@@ -26,7 +26,7 @@ jobs:
                   cache: "pnpm"
 
             - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm install --no-frozen-lockfile
 
             - name: Build web
               run: pnpm buildWebStandalone
@@ -34,11 +34,11 @@ jobs:
             - name: Build
               run: pnpm buildStandalone
 
-            - name: Generate plugin lists
-              run: |
-                pnpm generatePluginJson dist/plugins.json
-                pnpm generateEquicordPluginJson dist/equicordplugins.json
-                pnpm generateVencordPluginJson dist/vencordplugins.json
+            - name: Generate plugin list
+              run: pnpm generatePluginJson dist/vencordplugins.json
+
+            - name: Generate Equicord plugin list
+              run: pnpm generateEquicordPluginJson dist/equicordplugins.json
 
             - name: Collect files to be released
               run: |

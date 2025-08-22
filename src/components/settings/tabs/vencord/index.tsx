@@ -26,8 +26,7 @@ import { openNotificationSettingsModal } from "./NotificationSettings";
 
 const cl = classNameFactory("vc-settings-");
 
-const DEFAULT_DONATE_IMAGE = "https://cdn.discordapp.com/emojis/1026533090627174460.png";
-const SHIGGY_DONATE_IMAGE = "https://i.imgur.com/57ATLZu.png";
+// Removed unused default donate images since the support card is no longer shown
 
 const VENNIE_DONATOR_IMAGE = "https://cdn.discordapp.com/emojis/1238120638020063377.png";
 const COZY_CONTRIB_IMAGE = "https://cdn.discordapp.com/emojis/1026533070955872337.png";
@@ -42,10 +41,7 @@ type KeysOfType<Object, Type> = {
 function EquicordSettings() {
     const settings = useSettings();
 
-    const donateImage = React.useMemo(
-        () => (Math.random() > 0.5 ? DEFAULT_DONATE_IMAGE : SHIGGY_DONATE_IMAGE),
-        [],
-    );
+    // Support card removed, no donate image needed
 
     const isWindows = navigator.platform.toLowerCase().startsWith("win");
     const isMac = navigator.platform.toLowerCase().startsWith("mac");
@@ -113,8 +109,8 @@ function EquicordSettings() {
         ];
 
     return (
-        <SettingsTab title="Equicord Settings">
-            {(isEquicordDonor(user?.id) || isVencordDonor(user?.id)) ? (
+        <SettingsTab title="Bashcord Settings">
+            {(isEquicordDonor(user?.id) || isVencordDonor(user?.id)) && (
                 <SpecialCard
                     title="Donations"
                     subtitle="Thank you for donating!"
@@ -128,16 +124,6 @@ function EquicordSettings() {
                     cardImage={VENNIE_DONATOR_IMAGE}
                     backgroundImage={DONOR_BACKGROUND_IMAGE}
                     backgroundColor="#ED87A9"
-                >
-                    <DonateButtonComponent />
-                </SpecialCard>
-            ) : (
-                <SpecialCard
-                    title="Support the Project"
-                    description="Please consider supporting the development of Equicord by donating!"
-                    cardImage={donateImage}
-                    backgroundImage={DONOR_BACKGROUND_IMAGE}
-                    backgroundColor="#c3a3ce"
                 >
                     <DonateButtonComponent />
                 </SpecialCard>
@@ -349,4 +335,4 @@ export function isEquicordDonor(userId: string): boolean {
     return GuildMemberStore.getMember(GUILD_ID, userId)?.roles.includes(DONOR_ROLE_ID) || !!donorBadges;
 }
 
-export default wrapTab(EquicordSettings, "Equicord Settings");
+export default wrapTab(EquicordSettings, "Bashcord Settings");
