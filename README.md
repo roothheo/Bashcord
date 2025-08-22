@@ -1,108 +1,68 @@
-# [<img src="./browser/icon.png" width="40" align="left" alt="Equicord">](https://github.com/Equicord/Equicord) Equicord
+# <img src="./browser/icon.png" width="40" align="left" alt="Bashcord"> Bashcord
 
-[![Equibop](https://img.shields.io/badge/Equibop-grey?style=flat)](https://github.com/Equicord/Equibop)
-[![Tests](https://github.com/Equicord/Equicord/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/Equicord/Equicord/actions/workflows/test.yml)
-[![Discord](https://img.shields.io/discord/1173279886065029291.svg?color=768AD4&label=Discord&logo=discord&logoColor=white)](https://equicord.org/discord)
+> Le client Discord simple, rapide et libre – à l’allure de terminal.
 
-Equicord is a fork of [Vencord](https://github.com/Vendicated/Vencord), with over 300+ plugins.
+## 🧭 Présentation
 
-You can join our [discord server](https://equicord.org/discord) for commits, changes, chat or even support.
+Bashcord est un fork d’[Equicord](https://github.com/Equicord/Equicord), lui‑même basé sur [Vencord](https://github.com/Vendicated/Vencord).
+Le projet met l’accent sur une identité visuelle inspirée « terminal » et une expérience francisée,
+tout en restant compatible avec l’écosystème Equicord.
 
-### Included Plugins
+### 🎨 Identité visuelle
 
-Our included plugins can be found [here](https://equicord.org/plugins)
+- Palette « Zelda »: bleu profond, violet sombre et accents or
+- UI minimaliste, contrastée, pensée pour le confort et la lisibilité
 
-## Installing / Uninstalling
+### 🔁 Différences clés vs Equicord
 
-Windows
+- Installeur dédié (GUI/CLI) avec récupération auto des dernières builds via GitHub
+- Expérience et messages en français, avec un ton léger
 
-- [GUI](https://github.com/Equicord/Equilotl/releases/latest/download/Equilotl.exe)
-- [CLI](https://github.com/Equicord/Equilotl/releases/latest/download/EquilotlCli.exe)
+## 📥 Téléchargement
 
-MacOS
+Rendez‑vous sur la page de Release « latest » et téléchargez l’asset correspondant à votre plateforme:
 
-- [GUI](https://github.com/Equicord/Equilotl/releases/latest/download/Equilotl.MacOS.zip)
+- Lien: [Bashcord‑Installer — latest](https://github.com/roothheo/Bashcord-Installer/releases/tag/latest)
+- Choisissez le fichier pour votre OS (Windows `.exe`, macOS `.zip`, Linux binaire)
+- Besoin d’aide ? Contactez `miserablevie` sur Discord
 
-Linux
+> Conseil: préférez toujours les liens « Releases GitHub » officiels. Tout autre site peut être malveillant.
 
-- [GUI-X11](https://github.com/Equicord/Equilotl/releases/latest/download/Equilotl-x11)
-- [CLI](https://github.com/Equicord/Equilotl/releases/latest/download/EquilotlCli-Linux)
-- [AUR](https://aur.archlinux.org/packages?O=0&K=equicord)
+## 🧩 Plugins
 
-```shell
-sh -c "$(curl -sS https://raw.githubusercontent.com/Equicord/Equicord/refs/heads/main/misc/install.sh)"
-```
+Bashcord hérite de la compatibilité avec les plugins Equicord. Référez‑vous à la liste Equicord pour un aperçu complet.
 
-## Installing Equicord Devbuild
+## 🛠️ Développement (aperçu)
 
-### Dependencies
+Prérequis: [Git](https://git-scm.com/download), [Node.js LTS](https://nodejs.dev/en/) et `pnpm`.
 
-[Git](https://git-scm.com/download) and [Node.JS LTS](https://nodejs.dev/en/) are required.
-
-Install `pnpm`:
-
-> :exclamation: This next command may need to be run as admin/root depending on your system, and you may need to close and reopen your terminal for pnpm to be in your PATH.
-
-```shell
+```bash
 npm i -g pnpm
-```
-
-> :exclamation: **IMPORTANT** Make sure you aren't using an admin/root terminal from here onwards. It **will** mess up your Discord/Equicord instance and you **will** most likely have to reinstall.
-
-Clone Equicord:
-
-```shell
-git clone https://github.com/Equicord/Equicord
-cd Equicord
-```
-
-Install dependencies:
-
-```shell
+git clone https://github.com/roothheo/Bashcord
+cd Bashcord
 pnpm install --frozen-lockfile
-```
-
-Build Equicord:
-
-```shell
 pnpm build
 ```
 
-Inject Equicord into your client:
+Injection (selon votre environnement Discord) est similaire à Equicord/Vencord.
 
-```shell
-pnpm inject
-```
+## 🧑‍💻 Code source
 
-## Credits
+- Bashcord: `https://github.com/roothheo/Bashcord`
+- Installeur: `https://github.com/roothheo/Bashcord-Installer`
+- Projet parent: `https://github.com/Equicord/Equicord`
 
-Thank you to [Vendicated](https://github.com/Vendicated) for creating [Vencord](https://github.com/Vendicated/Vencord) & [Suncord](https://github.com/verticalsync/Suncord) by [verticalsync](https://github.com/verticalsync) for helping when needed.
+## 🤝 Communauté
 
-## Star History
+- Rejoindre le serveur Discord: `https://discord.gg/dgarRhKJxj`
+- Support: contactez `miserablevie` sur Discord
 
-<a href="https://star-history.com/#Equicord/Equicord&Timeline">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Equicord/Equicord&type=Timeline&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Equicord/Equicord&type=Timeline" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Equicord/Equicord&type=Timeline" />
-  </picture>
-</a>
+## 🙏 Crédits
 
-## Disclaimer
+- Merci à l’équipe et la communauté **Equicord** pour leur travail open‑source exceptionnel
+- Merci à **Vendicated** pour **Vencord** et à **verticalsync** pour **Suncord**
 
-Discord is trademark of Discord Inc. and solely mentioned for the sake of descriptivity.
-Mentioning it does not imply any affiliation with or endorsement by Discord Inc.
-Vencord is not connected to Equicord and as such, all donation links go to Vendicated's donation link.
+## ⚠️ Avertissement
 
-<details>
-<summary>Using Equicord violates Discord's terms of service</summary>
-
-Client modifications are against Discord’s Terms of Service.
-
-However, Discord is pretty indifferent about them and there are no known cases of users getting banned for using client mods! So you should generally be fine if you don’t use plugins that implement abusive behaviour. But no worries, all inbuilt plugins are safe to use!
-
-Regardless, if your account is essential to you and getting disabled would be a disaster for you, you should probably not use any client mods (not exclusive to Equicord), just to be safe
-
-Additionally, make sure not to post screenshots with Equicord in a server where you might get banned for it
-
-</details>
+Les modifications de client enfreignent les Conditions d’utilisation de Discord. Utilisez Bashcord à vos risques et périls.
+Évitez les plugins abusifs, et abstenez‑vous de publier des captures dans des serveurs qui l’interdiraient.
