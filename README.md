@@ -1,11 +1,11 @@
 # <img src="./browser/icon.png" width="40" align="left" alt="Bashcord"> Bashcord
 
-> Le client Discord simple, rapide et libre – à l’allure de terminal.
+> Le client Discord simple, rapide et libre.
 
 ## 🧭 Présentation
 
 Bashcord est un fork d’[Equicord](https://github.com/Equicord/Equicord), lui‑même basé sur [Vencord](https://github.com/Vendicated/Vencord).
-Le projet met l’accent sur une identité visuelle inspirée « terminal » et une expérience francisée,
+Le projet met l’accent sur une identité visuelle soignée et une expérience francisée,
 tout en restant compatible avec l’écosystème Equicord.
 
 ### 🎨 Identité visuelle
