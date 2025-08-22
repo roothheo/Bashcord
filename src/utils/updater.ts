@@ -27,6 +27,11 @@ export let isOutdated = false;
 export let isNewer = false;
 export let updateError: any;
 export let changes: Record<"hash" | "author" | "message", string>[];
+// When a successful update has been applied and a rebuild completed,
+// the running process still has the old gitHash until restart. To avoid
+// confusing users by repeatedly showing the same commits, we suppress
+// update results until the app restarts.
+export let suppressUpdatesUntilRestart = false;
 
 
 export function shortGitHash(length = 7) {
@@ -43,6 +48,11 @@ async function Unwrap<T>(p: Promise<IpcRes<T>>) {
 }
 
 export async function checkForUpdates() {
+    if (suppressUpdatesUntilRestart) {
+        isOutdated = false;
+        changes = [];
+        return false;
+    }
     changes = await Unwrap(VencordNative.updater.getUpdates());
 
     // we only want to check this for the git updater, not the http updater
@@ -65,6 +75,9 @@ export async function update() {
         isOutdated = false;
         if (!await Unwrap(VencordNative.updater.rebuild()))
             throw new Error("The Build failed. Please try manually building the new update");
+        // Hide updates until restart so the list does not show stale commits
+        suppressUpdatesUntilRestart = true;
+        changes = [];
     }
 
     return res;
