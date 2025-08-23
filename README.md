@@ -1,4 +1,4 @@
-# <img src="./browser/icon.png" width="40" align="left" alt="Bashcord"> Bashcord
+# <img src="https://avatars.githubusercontent.com/u/116464968?v=4&size=64" width="40" align="left" alt="Bashcord"> Bashcord
 
 > Le client Discord simple, rapide et libre.
 
