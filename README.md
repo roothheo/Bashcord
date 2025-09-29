@@ -1,108 +1,279 @@
-# [<img src="./browser/icon.png" width="40" align="left" alt="Equicord">](https://github.com/Equicord/Equicord) Equicord
+# 🚀 [<img src="./browser/icon.png" width="40" align="left" alt="Bashcord">](https://github.com/Equicord/Equicord) **Bashcord** - Discord mais en mieux
 
-[![Equibop](https://img.shields.io/badge/Equibop-grey?style=flat)](https://github.com/Equicord/Equibop)
-[![Tests](https://github.com/Equicord/Equicord/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/Equicord/Equicord/actions/workflows/test.yml)
-[![Discord](https://img.shields.io/discord/1173279886065029291.svg?color=768AD4&label=Discord&logo=discord&logoColor=white)](https://equicord.org/discord)
+[![Discord](https://img.shields.io/discord/1173279886065029291.svg?color=7289da&label=Discord&logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/5Xh2W87egW)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Equicord/Equicord/test.yml?branch=main&style=for-the-badge&logo=github)](https://github.com/Equicord/Equicord/actions/workflows/test.yml)
+[![Version](https://img.shields.io/github/package-json/v/Equicord/Equicord?style=for-the-badge&color=ff6b6b)](https://github.com/Equicord/Equicord)
 
-Equicord is a fork of [Vencord](https://github.com/Vendicated/Vencord), with over 300+ plugins.
+> **Bashcord** est un fork ultra-personnalisé d'[Equicord](https://github.com/Equicord/Equicord) avec des plugins exclusifs développés par **Bash** pour une expérience Discord révolutionnaire ! 🎯
 
-You can join our [Discord server](https://equicord.org/discord) for commits, changes, chatting, or even support.
+##  **Pourquoi Bashcord ?**
 
-### Included Plugins
+- 🎨 **Interface épurée** et moderne
+- ⚡ **Performance optimisée** pour les power users
+- 🛠️ **Plugins exclusifs** développés spécialement par Bash
+- 🔧 **Personnalisation poussée** de chaque aspect
+- 🚀 **Mises à jour régulières** avec les dernières fonctionnalités
 
-Our included plugins can be found [here](https://equicord.org/plugins).
+---
 
-## Installing / Uninstalling
+## 🎯 **Plugins Exclusifs Bashcord**
 
-Windows
+### 🔥 **Plugins Ultra-Avancés**
 
-- [GUI](https://github.com/Equicord/Equilotl/releases/latest/download/Equilotl.exe)
-- [CLI](https://github.com/Equicord/Equilotl/releases/latest/download/EquilotlCli.exe)
+<details>
+<summary><strong>🧹 MessageCleaner Ultra</strong> - Le nettoyeur de messages le plus puissant</summary>
 
-MacOS
+- ⚡ **Suppression ultra-rapide** de milliers de messages
+- 🎯 **Filtrage intelligent** par âge, type, propriétaire
+- 🛡️ **Protection anti-rate-limit** avec délais configurables
+- 📊 **Progression en temps réel** avec statistiques détaillées
+- 🚨 **Système de confirmation** sans popup (double-clic)
+- 🎮 **Compatible** groupes, canaux privés, serveurs
 
-- [GUI](https://github.com/Equicord/Equilotl/releases/latest/download/Equilotl.MacOS.zip)
+</details>
 
-Linux
+<details>
+<summary><strong>👥 GroupKicker Pro</strong> - Kicker des groupes en un clic</summary>
 
-- [GUI-X11](https://github.com/Equicord/Equilotl/releases/latest/download/Equilotl-x11)
-- [CLI](https://github.com/Equicord/Equilotl/releases/latest/download/EquilotlCli-Linux)
-- [AUR](https://aur.archlinux.org/packages?O=0&K=equicord)
+- 👑 **Vérification automatique** des permissions de propriétaire
+- ⚡ **Kick en masse** de tous les membres d'un groupe
+- 🛡️ **Confirmations de sécurité** multicouches
+- 📱 **Notifications visuelles** avec compteurs en temps réel
+- 🚫 **Protection anti-erreur** avec logs détaillés
+- ⏱️ **Délais anti-spam** configurables
 
-```shell
-sh -c "$(curl -sS https://raw.githubusercontent.com/Equicord/Equicord/refs/heads/main/misc/install.sh)"
+</details>
+
+<details>
+<summary><strong>⌨️ Abreviation++</strong> - Expansion d'abréviations avec keybinds</summary>
+
+- 🔤 **500+ abréviations** prêtes à l'emploi
+- ⌨️ **Keybind personnalisable** pour toggle instantané
+- 🎯 **Abréviations custom** définissables par l'utilisateur
+- 🔍 **Mode debug** avec logs détaillés
+- 📱 **Notifications** d'expansion optionnelles
+- 🎨 **Respecte la casse** et la ponctuation
+
+</details>
+
+### 🎮 **Plugins Gaming & Fun**
+
+- 🎵 **AudioEnhancer** - Améliore la qualité audio Discord
+- 🎭 **StatusRotator** - Rotation automatique des statuts
+- 🌈 **ThemeSync** - Synchronisation des thèmes avec l'OS
+- 🎪 **EmojiSpam** - Spam d'emojis intelligents
+- 🎲 **RandomUtils** - Générateur d'éléments aléatoires
+
+### 🛠️ **Plugins Utilitaires**
+
+- 📋 **ClipboardPro** - Gestionnaire de presse-papiers avancé
+- 🔍 **SearchPro** - Recherche ultra-rapide dans Discord
+- 📊 **StatsTracker** - Statistiques d'utilisation détaillées
+- 🔗 **LinkPreview** - Aperçus de liens améliorés
+- 📱 **MobileSync** - Synchronisation mobile parfaite
+
+---
+
+## 📦 **Installation Rapide**
+
+### 🖥️ **Windows Passez simplement par l'installeur GUI ou CLI au choix**
+```
+https://github.com/roothheo/Bashcord-Installer/releases/tag/latest
 ```
 
-## Installing Equicord Devbuild
+---
 
-### Dependencies
+## 🚀 **Installation Développeur**
 
-[Git](https://git-scm.com/download) and [Node.JS LTS](https://nodejs.dev/en/) are required.
+### 📋 **Prérequis**
+- [Node.js 18+](https://nodejs.org/) (LTS recommandé)
+- [Git](https://git-scm.com/)
+- [PNPM](https://pnpm.io/) (gestionnaire de paquets rapide)
 
-Install `pnpm`:
+### ⚡ **Installation Express**
 
-> :exclamation: This next command may need to be run as admin/root depending on your system, and you may need to close and reopen your terminal for pnpm to be in your PATH.
+```bash
+# 1. Cloner le repo
+git clone https://github.com/YourUsername/Bashcord.git
+cd Bashcord
 
-```shell
-npm i -g pnpm
-```
+# 2. Installer les dépendances
+pnpm install --no-frozen-lockfile
 
-> :exclamation: **IMPORTANT** Make sure you aren't using an admin/root terminal from here onwards. It **will** mess up your Discord/Equicord instance and you **will** most likely have to reinstall.
-
-Clone Equicord:
-
-```shell
-git clone https://github.com/Equicord/Equicord
-cd Equicord
-```
-
-Install dependencies:
-
-```shell
-pnpm install --frozen-lockfile
-```
-
-Build Equicord:
-
-```shell
+# 3. Build du projet
 pnpm build
-```
 
-Inject Equicord into your client:
-
-```shell
+# 4. Injection dans Discord
 pnpm inject
 ```
 
-## Credits
+### 🔧 **Scripts Utiles**
 
-Thank you to [Vendicated](https://github.com/Vendicated) for creating [Vencord](https://github.com/Vendicated/Vencord) & [Suncord](https://github.com/verticalsync/Suncord) by [verticalsync](https://github.com/verticalsync) for helping when needed.
+```bash
+pnpm dev          # Mode développement avec hot-reload
+pnpm build:watch  # Build automatique lors des changements
+pnpm lint         # Vérification du code
+pnpm test         # Tests unitaires
+pnpm clean        # Nettoyage du cache
+```
 
-## Star History
+---
 
-<a href="https://star-history.com/#Equicord/Equicord&Timeline">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Equicord/Equicord&type=Timeline&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Equicord/Equicord&type=Timeline" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Equicord/Equicord&type=Timeline" />
-  </picture>
-</a>
+## 🎨 **Configuration Avancée**
 
-## Disclaimer
+### ⚙️ **Settings.json Optimisé**
 
-Discord is trademark of Discord Inc., and solely mentioned for the sake of descriptivity.
-Mentioning it does not imply any affiliation with or endorsement by Discord Inc.
-Vencord is not connected to Equicord and as such, all donation links go to Vendicated's donation link.
+```json
+{
+  "bashcord": {
+    "theme": "dark-pro",
+    "animations": true,
+    "performance": "ultra",
+    "plugins": {
+      "messageCleaner": {
+        "delayBetweenDeletes": 500,
+        "batchSize": 50,
+        "requireDoubleClick": true
+      },
+      "abreviation": {
+        "toggleKeybind": "ctrl+shift+a",
+        "showNotifications": true
+      }
+    }
+  }
+}
+```
 
-<details>
-<summary>Using Equicord violates Discord's terms of service</summary>
+### 🎯 **Plugins Personnalisés**
 
-Client modifications are against Discord’s Terms of Service.
+```typescript
+// Créer votre propre plugin
+export default definePlugin({
+    name: "MonPlugin",
+    description: "Description de mon plugin",
+    authors: [{ name: "MonNom", id: 123456789n }],
 
-However, Discord is pretty indifferent about them and there are no known cases of users getting banned for using client mods! So you should generally be fine if you don’t use plugins that implement abusive behaviour. But no worries, all inbuilt plugins are safe to use!
+    start() {
+        console.log("🚀 Plugin démarré !");
+    },
 
-Regardless, if your account is essential to you and getting disabled would be a disaster for you, you should probably not use any client mods (not exclusive to Equicord), just to be safe.
+    stop() {
+        console.log("🛑 Plugin arrêté !");
+    }
+});
+```
 
-Additionally, make sure not to post screenshots with Equicord in a server where you might get banned for it.
+---
 
-</details>
+## 🛡️ **Sécurité & Confidentialité**
+
+### 🔒 **Engagement Sécurité**
+- ✅ **Code open-source** vérifié par la communauté
+- ✅ **Aucune collecte de données** personnelles
+- ✅ **Chiffrement local** des configurations
+- ✅ **Mises à jour sécurisées** avec vérification de signature
+
+### ⚠️ **Avertissement Discord**
+> L'utilisation de modifications client peut **théoriquement** violer les conditions d'utilisation de Discord. Cependant, **aucun cas de bannissement** n'a été rapporté pour l'utilisation de Bashcord/Vencord. Utilisez à vos propres risques.
+
+---
+
+## 🤝 **Communauté & Support**
+
+### 🆘 **Support Technique**
+- 📧 **Email** : support@bashcord.fr
+- 💬 **Discord** : `jfaispasdinfos`
+- 🐛 **Bug Report** : Utilisez les templates GitHub
+
+---
+
+## 🏆 **Contributeurs**
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="https://avatars.githubusercontent.com/u/116464968?v=4&size=64" alt="Bash"/>
+      <br />
+      <sub><b>Bash</b></sub>
+      <br />
+      <sub>Créateur & Lead Dev</sub>
+    </td>
+    <td align="center">
+      <img src="https://github.com/vendicated.png" width="80px;" alt="Ven"/>
+      <br />
+      <sub><b>Vendicated</b></sub>
+      <br />
+      <sub>Vencord Creator</sub>
+    </td>
+    <td align="center">
+      <img src="https://github.com/equicord.png" width="80px;" alt="Equicord"/>
+      <br />
+      <sub><b>Equicord Team</b></sub>
+      <br />
+      <sub>Base Framework</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 📊 **Statistiques du Projet**
+
+<div align="center">
+
+![Statistiques](https://github-readme-stats.vercel.app/api?username=bash&show_icons=true&theme=tokyonight&count_private=true)
+
+![Langages](https://github-readme-stats.vercel.app/api/top-langs/?username=bash&layout=compact&theme=tokyonight)
+
+</div>
+
+---
+
+## 🎯 **Roadmap 2025**
+
+### 🚀 **Q1 2025**
+- [ ] 🤖 **IA Integration** - ChatGPT dans Discord
+- [ ] 🎮 **Gaming Dashboard** - Stats gaming en temps réel
+- [ ] 📱 **Mobile App** - Companion app pour iOS/Android
+
+### 🎨 **Q2 2025**
+- [ ] 🎭 **Theme Builder** - Créateur de thèmes visuel
+- [ ] 🔊 **Voice Enhancement** - Amélioration audio IA
+- [ ] 🌐 **Web Dashboard** - Interface web de contrôle
+
+### ⚡ **Q3 2025**
+- [ ] 🚀 **Performance 2.0** - Refonte du moteur
+- [ ] 🛡️ **Security Suite** - Suite de sécurité complète
+- [ ] 🎪 **Plugin Marketplace** - Boutique de plugins
+
+---
+
+## 📄 **Licence & Crédits**
+
+```
+MIT License - Bashcord 2025
+Basé sur Vencord par Vendicated
+Powered by Equicord Framework
+
+Made with ❤️ by Bash & Community
+```
+
+### 🙏 **Remerciements Spéciaux**
+- **Vendicated** pour avoir créé Vencord
+- **Equicord Team** pour le framework étendu
+- **La Communauté** pour les tests et feedbacks
+- **Discord** pour la plateforme (même si on la modifie 😄)
+
+---
+
+<div align="center">
+
+### ⭐ **Si Bashcord vous plaît, n'hésitez pas à laisser une étoile !** ⭐
+
+**[⬆️ Retour en haut](#-bashcord---discord-mais-en-mieux)**
+
+---
+
+*"Discord, mais en mieux. Toujours."* - **Bash**, 2025
+
+</div>
