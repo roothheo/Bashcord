@@ -45,7 +45,7 @@ const settings = definePluginSettings({
 });
 
 const UserContextMenuPatch: NavContextMenuPatchCallback = (children, { channel, user }: UserContextProps) => {
-    if (UserStore.getCurrentUser().id === user.id || !RelationshipStore.getFriendIDs().includes(user.id)) return;
+    if (UserStore.getCurrentUser().id === user.id) return;
 
     const [checked, setChecked] = React.useState(followedUserInfo?.userId === user.id);
 
@@ -75,18 +75,17 @@ const UserContextMenuPatch: NavContextMenuPatchCallback = (children, { channel, 
 
 export default definePlugin({
     name: "FollowVoiceUser",
-    description: "Follow a friend in voice chat.",
+    description: "Follow users in voice chat.",
     authors: [EquicordDevs.TheArmagan],
     settings,
     settingsAboutComponent: () => <>
         <Forms.FormText className="plugin-warning">
-            This Plugin is used to follow a Friend/Friends into voice chat(s).
+            This Plugin is used to follow users into voice chat(s).
         </Forms.FormText>
     </>,
     flux: {
         async VOICE_STATE_UPDATES({ voiceStates }: { voiceStates: VoiceState[]; }) {
             if (!followedUserInfo) return;
-            if (!RelationshipStore.getFriendIDs().includes(followedUserInfo.userId)) return;
 
             if (
                 settings.store.onlyWhenInVoice
