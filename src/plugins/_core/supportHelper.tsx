@@ -227,7 +227,7 @@ export default definePlugin({
             if (!isSupportChannel) return;
 
             const selfId = UserStore.getCurrentUser()?.id;
-            if (!selfId || isPluginDev(selfId) || isEquicordPluginDev(selfId)) return;
+            if (!selfId || isAnyPluginDev(selfId)) return;
             if (VC_SUPPORT_CHANNEL_IDS.includes(channelId) && Vencord.Plugins.isPluginEnabled("VCSupport") && !clicked) {
                 return Alerts.show({
                     title: "You are entering the support channel!",
@@ -404,8 +404,8 @@ export default definePlugin({
 
     renderContributorDmWarningCard: ErrorBoundary.wrap(({ channel }) => {
         const userId = channel.getRecipientId();
-        if (!isPluginDev(userId) || !isEquicordPluginDev(userId)) return null;
-        if (RelationshipStore.isFriend(userId) || isPluginDev(UserStore.getCurrentUser()?.id) || isEquicordPluginDev(UserStore.getCurrentUser()?.id)) return null;
+        if (!isAnyPluginDev(userId)) return null;
+        if (RelationshipStore.isFriend(userId) || isAnyPluginDev(UserStore.getCurrentUser()?.id)) return null;
 
         return (
             <Card className={`vc-plugins-restart-card ${Margins.top8}`}>
