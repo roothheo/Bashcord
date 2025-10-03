@@ -15,6 +15,7 @@ import { getCurrentMedia, settings } from "./utils";
 const startStream = findByCodeLazy('type:"STREAM_START"');
 
 let hasStreamed;
+let lastChannelId: string | null = null;
 
 async function autoStartStream() {
     const selected = SelectedChannelStore.getVoiceChannelId();
@@ -47,13 +48,21 @@ export default definePlugin({
                 const { userId, channelId } = state;
                 if (userId !== myId) continue;
 
+                // Si on rejoint un salon vocal
                 if (channelId && !hasStreamed) {
                     hasStreamed = true;
+                    lastChannelId = channelId;
                     await autoStartStream();
                 }
-
-                if (!channelId) {
+                // Si on change de salon vocal (même si on streamait déjà)
+                else if (channelId && hasStreamed && lastChannelId !== channelId) {
+                    lastChannelId = channelId;
+                    await autoStartStream();
+                }
+                // Si on quitte le salon vocal
+                else if (!channelId) {
                     hasStreamed = false;
+                    lastChannelId = null;
                 }
 
                 break;
