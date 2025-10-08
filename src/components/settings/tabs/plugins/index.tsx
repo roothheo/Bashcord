@@ -371,7 +371,7 @@ export default function PluginSettings() {
                             { label: "Show Disabled", value: SearchStatus.DISABLED },
                             { label: "Show Equicord", value: SearchStatus.EQUICORD },
                             { label: "Show Vencord", value: SearchStatus.VENCORD },
-                            ...(totalUserPlugins > 0 ? [{ label: "Show Custom", value: SearchStatus.CUSTOM }] : []),
+                            ...(totalUserPlugins > 0 ? [{ label: "Show Bashcord", value: SearchStatus.CUSTOM }] : []),
                             { label: "Show New", value: SearchStatus.NEW },
                         ]}
                         serialize={String}
