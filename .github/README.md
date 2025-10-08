@@ -11,7 +11,7 @@
 - **Protection** : Préserve vos modifications dans userplugins/ et followVoiceUser/
 - **Déclenchement manuel** : Onglet Actions → Run workflow
 
-### 🔨 Build after Sync  
+### 🔨 Build after Sync
 - **Déclencheur** : Après chaque sync réussi
 - **Fonction** : Build et test automatique
 - **Artefacts** : Disponibles pendant 7 jours

@@ -4,10 +4,10 @@ on:
   # Synchronisation automatique toutes les heures
   schedule:
     - cron: '0 * * * *'  # Toutes les heures
-  
+
   # Permet de déclencher manuellement
   workflow_dispatch:
-  
+
   # Se déclenche quand Equicord push de nouveaux commits
   repository_dispatch:
     types: [equicord-update]
@@ -15,66 +15,66 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout bashcord
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0  # Récupérer tout l'historique
-      
+
       - name: 🔧 Configure Git
         run: |
           git config user.name "Bashcord Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-      
+
       - name: 🔗 Add Equicord upstream
         run: |
           git remote add upstream https://github.com/Equicord/Equicord.git || true
           git fetch upstream
-      
+
       - name: 📊 Check for updates
         id: check
         run: |
           CHANGES=$(git log --oneline HEAD..upstream/main | wc -l)
           echo "changes=$CHANGES" >> $GITHUB_OUTPUT
-          
+
           if [ "$CHANGES" -gt 0 ]; then
             echo "✅ $CHANGES nouveau(x) commit(s) disponible(s)"
             git log --oneline HEAD..upstream/main | head -10
           else
             echo "✅ Déjà à jour avec Equicord"
           fi
-      
+
       - name: 🔀 Merge Equicord changes
         if: steps.check.outputs.changes > 0
         run: |
           echo "🔀 Merge en cours (fichiers protégés préservés)..."
-          
+
           # Tenter le merge
           if git merge upstream/main --no-edit; then
             echo "✅ Merge réussi sans conflit"
           else
             echo "⚠️  Conflits détectés, résolution automatique..."
-            
+
             # Garder nos versions des fichiers protégés
             git checkout --ours src/userplugins/ || true
             git checkout --ours src/equicordplugins/followVoiceUser/ || true
             git checkout --ours src/components/settings/tabs/plugins/index.tsx || true
-            
+
             # Marquer les conflits comme résolus
             git add .
             git merge --continue --no-edit || true
-            
+
             echo "✅ Conflits résolus"
           fi
-      
+
       - name: 📤 Push changes
         if: steps.check.outputs.changes > 0
         run: |
           git push origin main
           echo "✅ Changements poussés vers bashcord"
-      
+
       - name: 📝 Create sync summary
         if: steps.check.outputs.changes > 0
         run: |
@@ -86,7 +86,7 @@ jobs:
           echo "- ✅ src/userplugins/**" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ src/equicordplugins/followVoiceUser/**" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ src/components/settings/tabs/plugins/index.tsx" >> $GITHUB_STEP_SUMMARY
-      
+
       - name: ✅ No changes
         if: steps.check.outputs.changes == 0
         run: |
