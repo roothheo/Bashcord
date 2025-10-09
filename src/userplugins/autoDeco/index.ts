@@ -3,7 +3,7 @@ import { NavContextMenuPatchCallback, addContextMenuPatch, removeContextMenuPatc
 import { definePluginSettings } from "@api/Settings";
 import { showNotification } from "@api/Notifications";
 import { findByPropsLazy, findStoreLazy } from "@webpack";
-import { Menu, React } from "@webpack/common";
+import { Menu, React, FluxDispatcher } from "@webpack/common";
 import { Channel, User } from "discord-types/general";
 
 const VoiceActions = findByPropsLazy("leaveChannel");
@@ -20,6 +20,7 @@ const settings = definePluginSettings({
 });
 
 let targetUserId: string | null = null;
+let lastProcessedStates: Map<string, string | null> = new Map();
 
 const UserContextMenuPatch: NavContextMenuPatchCallback = (children, { user }: { user: User; }) => {
     const currentUser = UserStore.getCurrentUser();
@@ -59,20 +60,39 @@ export default definePlugin({
             if (!targetUserId || !settings.store.enabled) return;
             const currentUserId = UserStore.getCurrentUser().id;
             const currentChannelId = SelectedChannelStore.getVoiceChannelId();
+
             for (const state of voiceStates) {
-                if (
-                    state.userId === targetUserId &&
-                    state.channelId &&
-                    currentChannelId
-                ) {
-                    // L'utilisateur cible vient de rejoindre un vocal
-                    if (VoiceActions && typeof VoiceActions.leaveChannel === "function") {
-                        VoiceActions.leaveChannel();
+                if (state.userId === targetUserId) {
+                    const previousChannelId = lastProcessedStates.get(state.userId);
+
+                    // Vérifier si l'utilisateur vient de rejoindre notre canal vocal
+                    if (
+                        state.channelId &&
+                        currentChannelId &&
+                        state.channelId === currentChannelId &&
+                        previousChannelId !== currentChannelId
+                    ) {
+                        // L'utilisateur cible vient de rejoindre le même canal vocal que nous
+                        console.log("AutoDeco: Déconnexion automatique déclenchée", {
+                            targetUser: state.user?.username,
+                            channelId: state.channelId,
+                            currentChannelId,
+                            previousChannelId
+                        });
+
+                        // Utiliser FluxDispatcher pour se déconnecter (plus fiable)
+                        FluxDispatcher.dispatch({
+                            type: "VOICE_CHANNEL_SELECT",
+                            channelId: null
+                        });
+                        showNotification({
+                            title: "AutoDeco",
+                            body: `Déconnexion automatique : ${state.user?.username || "Utilisateur"} a rejoint votre canal vocal`
+                        });
                     }
-                    showNotification({
-                        title: "AutoDeco",
-                        body: `Déconnexion automatique : ${state.user?.username || "Utilisateur"} a rejoint un canal vocal`
-                    });
+
+                    // Mettre à jour l'état précédent
+                    lastProcessedStates.set(state.userId, state.channelId);
                 }
             }
         }
@@ -80,5 +100,6 @@ export default definePlugin({
     start() { },
     stop() {
         targetUserId = null;
+        lastProcessedStates.clear();
     }
 });
