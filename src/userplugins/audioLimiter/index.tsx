@@ -5,7 +5,6 @@
  */
 
 import { definePluginSettings } from "@api/Settings";
-import { showNotification } from "@api/Notifications";
 import { findByPropsLazy } from "@webpack";
 import { React, FluxDispatcher, Forms, Slider } from "@webpack/common";
 import definePlugin, { OptionType } from "@utils/types";
@@ -76,11 +75,6 @@ const settings = definePluginSettings({
     },
 
     // Paramètres d'affichage
-    showNotifications: {
-        type: OptionType.BOOLEAN,
-        default: true,
-        description: "Afficher les notifications de limitation"
-    },
     showVisualIndicator: {
         type: OptionType.BOOLEAN,
         default: true,
@@ -97,8 +91,7 @@ let limiterState = {
     compressor: null as DynamicsCompressorNode | null,
     currentLevel: 0,
     peakLevel: 0,
-    limitingCount: 0,
-    lastNotification: 0
+    limitingCount: 0
 };
 
 // Fonction pour obtenir le volume actuel
@@ -154,15 +147,6 @@ function checkAndLimitVolume() {
         setVolume(maxVolume);
         limiterState.limitingCount++;
 
-        // Notification avec throttling (max 1 par seconde)
-        const now = Date.now();
-        if (settings.store.showNotifications && now - limiterState.lastNotification > 1000) {
-            showNotification({
-                title: "Audio Limiter",
-                body: `Volume limité de ${currentVolume}% à ${maxVolume}%`
-            });
-            limiterState.lastNotification = now;
-        }
     }
 }
 
@@ -205,12 +189,6 @@ async function createAudioLimiter() {
         // Démarrer la surveillance des niveaux
         startLevelMonitoring();
 
-        if (settings.store.showNotifications) {
-            showNotification({
-                title: "Audio Limiter",
-                body: `Limitation audio activée à ${settings.store.maxDecibels} dB`
-            });
-        }
 
         return { audioContext, gainNode, analyser, compressor };
     } catch (error) {
@@ -238,14 +216,6 @@ function startLevelMonitoring() {
         if (currentLevel > settings.store.maxDecibels) {
             limiterState.limitingCount++;
 
-            const now = Date.now();
-            if (settings.store.showNotifications && now - limiterState.lastNotification > 2000) {
-                showNotification({
-                    title: "Audio Limiter - Limitation Active",
-                    body: `Niveau: ${currentLevel.toFixed(1)} dB (limite: ${settings.store.maxDecibels} dB)`
-                });
-                limiterState.lastNotification = now;
-            }
         }
 
         // Continuer la surveillance
@@ -448,13 +418,6 @@ function SettingsPanel() {
                 />
             </Forms.FormItem>
 
-            <Forms.FormItem>
-                <Forms.FormSwitch
-                    title="Afficher les notifications"
-                    value={settings.store.showNotifications}
-                    onChange={(value) => settings.store.showNotifications = value}
-                />
-            </Forms.FormItem>
 
             <Forms.FormItem>
                 <Forms.FormSwitch
