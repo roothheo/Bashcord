@@ -20,20 +20,40 @@ import { FormSwitchCompat } from "@components/FormSwitch";
 import { LazyComponent } from "@utils/lazyReact";
 import * as t from "@vencord/discord-types";
 import { filters, mapMangledModuleLazy, waitFor } from "@webpack";
+import { React } from "@webpack/common";
 
 import { FormText } from "./FormText";
 import { waitForComponent } from "./internal";
 
 
 const FormTitle = waitForComponent<t.FormTitle>("FormTitle", filters.componentByCode('["defaultMargin".concat', '="h5"'));
-const FormSection = waitForComponent<t.FormSection>("FormSection", filters.componentByCode(".titleId)"));
+
+// FormSection avec filtres multiples pour une meilleure compatibilité
+const FormSection = waitForComponent<t.FormSection>("FormSection", [
+    filters.componentByCode(".titleId)"),
+    filters.componentByCode("titleId"),
+    filters.componentByCode("FormSection"),
+    filters.byProps("title", "children"),
+    filters.byProps("titleId", "className"),
+    filters.byProps("title", "tag"),
+    filters.byProps("titleId", "disabled"),
+    filters.byProps("title", "htmlFor"),
+    filters.byProps("titleId", "titleClassName")
+]);
+
 const FormDivider = waitForComponent<t.FormDivider>("FormDivider", filters.componentByCode(".divider,", ",style:", '"div"', /\.divider,\i\),style:/));
+const FormItem = waitForComponent<t.FormItem>("FormItem", filters.componentByCode("FormItem"));
+const FormLabel = waitForComponent<t.FormLabel>("FormLabel", filters.componentByCode("FormLabel"));
+const FormSwitch = waitForComponent<t.FormSwitch>("FormSwitch", filters.componentByCode("FormSwitch"));
 
 export const Forms = {
     FormTitle,
     FormText,
     FormSection,
-    FormDivider
+    FormDivider,
+    FormItem,
+    FormLabel,
+    FormSwitch
 };
 
 export const Card = waitForComponent<t.Card>("Card", filters.componentByCode(".editable),", ".outline:"));
