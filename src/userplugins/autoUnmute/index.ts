@@ -1,6 +1,8 @@
 import definePlugin from "@utils/types";
 import { findByPropsLazy, findStoreLazy } from "@webpack";
 import { UserStore, PermissionStore, PermissionsBits, ChannelStore } from "@webpack/common";
+import { RestAPI, Constants } from "@webpack/common";
+import { SelectedGuildStore } from "@webpack/common";
 
 // Récupération des stores et actions nécessaires
 const VoiceStateStore = findStoreLazy("VoiceStateStore");
@@ -20,6 +22,44 @@ interface VoiceState {
     sessionId: string;
     suppress: boolean;
     requestToSpeakTimestamp: string | null;
+}
+
+// Fonction pour démute un utilisateur via l'API Discord
+async function unmuteUserViaAPI(userId: string, guildId: string): Promise<void> {
+    try {
+        console.log(`[AutoUnmute] Tentative de démute via API pour l'utilisateur ${userId} dans le serveur ${guildId}`);
+
+        await RestAPI.patch({
+            url: Constants.Endpoints.GUILD_MEMBER(guildId, userId),
+            body: {
+                mute: false
+            }
+        });
+
+        console.log(`[AutoUnmute] Démute via API réussi pour l'utilisateur ${userId}`);
+    } catch (error) {
+        console.error(`[AutoUnmute] Erreur lors du démute via API:`, error);
+        throw error;
+    }
+}
+
+// Fonction pour désourdine un utilisateur via l'API Discord
+async function undeafenUserViaAPI(userId: string, guildId: string): Promise<void> {
+    try {
+        console.log(`[AutoUnmute] Tentative de désourdine via API pour l'utilisateur ${userId} dans le serveur ${guildId}`);
+
+        await RestAPI.patch({
+            url: Constants.Endpoints.GUILD_MEMBER(guildId, userId),
+            body: {
+                deaf: false
+            }
+        });
+
+        console.log(`[AutoUnmute] Désourdine via API réussi pour l'utilisateur ${userId}`);
+    } catch (error) {
+        console.error(`[AutoUnmute] Erreur lors du désourdine via API:`, error);
+        throw error;
+    }
 }
 
 export default definePlugin({
@@ -67,16 +107,25 @@ export default definePlugin({
                     const hasMutePermission = PermissionStore.can(PermissionsBits.MUTE_MEMBERS, channel);
 
                     if (hasMutePermission) {
-                        console.log(`[AutoUnmute] Permission MUTE_MEMBERS détectée, démute automatique en cours...`);
+                        console.log(`[AutoUnmute] Permission MUTE_MEMBERS détectée, démute automatique via API en cours...`);
 
-                        // Démute automatiquement sans notification
-                        setTimeout(() => {
+                        // Démute automatiquement via l'API Discord
+                        setTimeout(async () => {
                             try {
-                                // Utiliser toggleSelfMute pour se démute
-                                VoiceActions.toggleSelfMute();
-                                console.log(`[AutoUnmute] Démute automatique effectué avec succès`);
+                                // Utiliser l'API Discord pour se démute via le serveur
+                                await unmuteUserViaAPI(currentUserId, guildId);
+                                console.log(`[AutoUnmute] Démute automatique via API effectué avec succès`);
                             } catch (error) {
-                                console.error("[AutoUnmute] Erreur lors du démute automatique:", error);
+                                console.error("[AutoUnmute] Erreur lors du démute automatique via API:", error);
+
+                                // Fallback: essayer avec toggleSelfMute si l'API échoue
+                                try {
+                                    console.log(`[AutoUnmute] Tentative de fallback avec toggleSelfMute...`);
+                                    VoiceActions.toggleSelfMute();
+                                    console.log(`[AutoUnmute] Démute automatique via fallback effectué avec succès`);
+                                } catch (fallbackError) {
+                                    console.error("[AutoUnmute] Erreur lors du fallback:", fallbackError);
+                                }
                             }
                         }, 100); // Petit délai pour éviter les conflits
                     } else {
@@ -92,16 +141,25 @@ export default definePlugin({
                     const hasDeafenPermission = PermissionStore.can(PermissionsBits.DEAFEN_MEMBERS, channel);
 
                     if (hasDeafenPermission) {
-                        console.log(`[AutoUnmute] Permission DEAFEN_MEMBERS détectée, désourdine automatique en cours...`);
+                        console.log(`[AutoUnmute] Permission DEAFEN_MEMBERS détectée, désourdine automatique via API en cours...`);
 
-                        // Désourdine automatiquement sans notification
-                        setTimeout(() => {
+                        // Désourdine automatiquement via l'API Discord
+                        setTimeout(async () => {
                             try {
-                                // Utiliser toggleSelfDeaf pour se désourdine
-                                VoiceActions.toggleSelfDeaf();
-                                console.log(`[AutoUnmute] Désourdine automatique effectué avec succès`);
+                                // Utiliser l'API Discord pour se désourdine via le serveur
+                                await undeafenUserViaAPI(currentUserId, guildId);
+                                console.log(`[AutoUnmute] Désourdine automatique via API effectué avec succès`);
                             } catch (error) {
-                                console.error("[AutoUnmute] Erreur lors du désourdine automatique:", error);
+                                console.error("[AutoUnmute] Erreur lors du désourdine automatique via API:", error);
+
+                                // Fallback: essayer avec toggleSelfDeaf si l'API échoue
+                                try {
+                                    console.log(`[AutoUnmute] Tentative de fallback avec toggleSelfDeaf...`);
+                                    VoiceActions.toggleSelfDeaf();
+                                    console.log(`[AutoUnmute] Désourdine automatique via fallback effectué avec succès`);
+                                } catch (fallbackError) {
+                                    console.error("[AutoUnmute] Erreur lors du fallback:", fallbackError);
+                                }
                             }
                         }, 100); // Petit délai pour éviter les conflits
                     } else {

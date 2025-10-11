@@ -114,42 +114,84 @@ function debugLog(message: string) {
 
 // Fonction pour vérifier si un message peut être supprimé
 function canDeleteMessage(message: Message, currentUserId: string): boolean {
-    // Messages système
-    if (settings.store.skipSystemMessages && message.type !== 0) {
-        return false;
-    }
-
-    // Uniquement ses propres messages
-    if (settings.store.onlyOwnMessages && message.author.id !== currentUserId) {
-        return false;
-    }
-
-    // Age maximum
-    if (settings.store.maxAge > 0) {
-        // Gérer le timestamp comme un Moment ou une string
-        const messageTime = typeof message.timestamp === 'string'
-            ? new Date(message.timestamp).getTime()
-            : new Date(message.timestamp.toISOString()).getTime();
-
-        const messageAge = Date.now() - messageTime;
-        const maxAgeMs = settings.store.maxAge * 24 * 60 * 60 * 1000;
-        if (messageAge > maxAgeMs) {
+    try {
+        // Messages système
+        if (settings.store.skipSystemMessages && message.type !== 0) {
+            debugLog(`Message ${message.id} ignoré: message système (type: ${message.type})`);
             return false;
         }
-    }
 
-    return true;
+        // Uniquement ses propres messages
+        if (settings.store.onlyOwnMessages && message.author?.id !== currentUserId) {
+            debugLog(`Message ${message.id} ignoré: pas votre message (auteur: ${message.author?.id})`);
+            return false;
+        }
+
+        // Age maximum
+        if (settings.store.maxAge > 0) {
+            let messageTime: number;
+
+            // Gérer différents formats de timestamp
+            if (typeof message.timestamp === 'string') {
+                messageTime = new Date(message.timestamp).getTime();
+            } else if (message.timestamp && typeof message.timestamp === 'object' && 'toISOString' in message.timestamp) {
+                messageTime = new Date(message.timestamp.toISOString()).getTime();
+            } else if (typeof message.timestamp === 'number') {
+                messageTime = message.timestamp;
+            } else {
+                debugLog(`Message ${message.id} ignoré: timestamp invalide`);
+                return false;
+            }
+
+            // Vérifier si le timestamp est valide
+            if (isNaN(messageTime) || messageTime <= 0) {
+                debugLog(`Message ${message.id} ignoré: timestamp invalide (${message.timestamp})`);
+                return false;
+            }
+
+            const messageAge = Date.now() - messageTime;
+            const maxAgeMs = settings.store.maxAge * 24 * 60 * 60 * 1000;
+
+            if (messageAge > maxAgeMs) {
+                debugLog(`Message ${message.id} ignoré: trop ancien (${Math.round(messageAge / (24 * 60 * 60 * 1000))} jours)`);
+                return false;
+            }
+        }
+
+        debugLog(`Message ${message.id} peut être supprimé`);
+        return true;
+    } catch (error) {
+        debugLog(`Erreur lors de la vérification du message ${message.id}: ${error}`);
+        return false;
+    }
 }
 
 // Fonction pour supprimer un message
 async function deleteMessage(channelId: string, messageId: string): Promise<boolean> {
     try {
-        await RestAPI.del({
+        debugLog(`Tentative de suppression du message ${messageId} dans le canal ${channelId}`);
+
+        const response = await RestAPI.del({
             url: `/channels/${channelId}/messages/${messageId}`
         });
+
+        debugLog(`✅ Message ${messageId} supprimé avec succès`);
         return true;
-    } catch (error) {
-        debugLog(`❌ Erreur lors de la suppression du message ${messageId}: ${error}`);
+    } catch (error: any) {
+        const errorMessage = error?.message || error?.toString() || 'Erreur inconnue';
+        const statusCode = error?.status || error?.statusCode || 'N/A';
+
+        debugLog(`❌ Erreur lors de la suppression du message ${messageId}: ${errorMessage} (Status: ${statusCode})`);
+
+        // Log des erreurs spécifiques
+        if (statusCode === 403) {
+            debugLog(`❌ Permission refusée pour supprimer le message ${messageId}`);
+        } else if (statusCode === 404) {
+            debugLog(`❌ Message ${messageId} introuvable (déjà supprimé?)`);
+        } else if (statusCode === 429) {
+            debugLog(`❌ Rate limit atteint pour la suppression`);
+        }
+
         return false;
     }
 }
@@ -161,10 +203,33 @@ async function getChannelMessages(channelId: string, before?: string): Promise<M
             ? `/channels/${channelId}/messages?limit=${settings.store.batchSize}&before=${before}`
             : `/channels/${channelId}/messages?limit=${settings.store.batchSize}`;
 
+        debugLog(`Récupération des messages depuis: ${url}`);
+
         const response = await RestAPI.get({ url });
-        return response.body;
-    } catch (error) {
-        log(`❌ Erreur lors de la récupération des messages: ${error}`, "error");
+
+        if (!response || !response.body) {
+            debugLog(`Réponse vide ou invalide pour ${url}`);
+            return [];
+        }
+
+        const messages = Array.isArray(response.body) ? response.body : [];
+        debugLog(`Récupéré ${messages.length} messages depuis le canal ${channelId}`);
+
+        return messages;
+    } catch (error: any) {
+        const errorMessage = error?.message || error?.toString() || 'Erreur inconnue';
+        const statusCode = error?.status || error?.statusCode || 'N/A';
+
+        log(`❌ Erreur lors de la récupération des messages: ${errorMessage} (Status: ${statusCode})`, "error");
+
+        if (statusCode === 403) {
+            log(`❌ Permission refusée pour accéder au canal ${channelId}`, "error");
+        } else if (statusCode === 404) {
+            log(`❌ Canal ${channelId} introuvable`, "error");
+        } else if (statusCode === 429) {
+            log(`❌ Rate limit atteint pour la récupération des messages`, "error");
+        }
+
         return [];
     }
 }
@@ -270,7 +335,10 @@ async function cleanChannel(channelId: string) {
             const now = Date.now();
             if (now - lastClickTime > 3000) { // 3 secondes pour confirmer
                 lastClickTime = now;
+                log("Premier clic détecté, cliquez à nouveau dans les 3 secondes pour confirmer");
                 return; // Premier clic, attendre le second
+            } else {
+                log("Double-clic confirmé, démarrage du nettoyage");
             }
         }
 
@@ -297,55 +365,81 @@ async function cleanChannel(channelId: string) {
 
         // Boucle principale de nettoyage
         while (!shouldStopCleaning) {
-            const messages = await getChannelMessages(channelId, lastMessageId);
+            try {
+                const messages = await getChannelMessages(channelId, lastMessageId);
 
-            if (messages.length === 0) {
-                log("Plus de messages à traiter");
-                break;
-            }
+                if (messages.length === 0) {
+                    log("Plus de messages à traiter");
+                    break;
+                }
 
-            const validMessages = messages.filter(msg => canDeleteMessage(msg, currentUserId));
+                debugLog(`Traitement de ${messages.length} messages...`);
 
-            if (validMessages.length === 0) {
-                // Si aucun message valide dans ce batch, passer au suivant
+                const validMessages = messages.filter(msg => canDeleteMessage(msg, currentUserId));
+                debugLog(`${validMessages.length} messages valides sur ${messages.length}`);
+
+                if (validMessages.length === 0) {
+                    // Si aucun message valide dans ce batch, passer au suivant
+                    lastMessageId = messages[messages.length - 1].id;
+                    cleaningStats.skipped += messages.length;
+                    debugLog(`Aucun message valide dans ce batch, passage au suivant`);
+                    continue;
+                }
+
+                // Supprimer les messages un par un
+                for (const message of validMessages) {
+                    if (shouldStopCleaning) {
+                        log("Arrêt demandé par l'utilisateur");
+                        break;
+                    }
+
+                    const success = await deleteMessage(channelId, message.id);
+
+                    if (success) {
+                        cleaningStats.deleted++;
+                        debugLog(`✅ Message ${message.id} supprimé`);
+                    } else {
+                        cleaningStats.failed++;
+                        debugLog(`❌ Échec de suppression du message ${message.id}`);
+                    }
+
+                    totalProcessed++;
+
+                    // Délai anti-rate-limit
+                    if (settings.store.delayBetweenDeletes > 0) {
+                        await new Promise(resolve => setTimeout(resolve, settings.store.delayBetweenDeletes));
+                    }
+
+                    // Mise à jour de la progression tous les 10 messages
+                    if (totalProcessed % 10 === 0) {
+                        updateProgress();
+                    }
+                }
+
+                // Messages non valides comptés comme ignorés
+                const invalidMessages = messages.filter(msg => !canDeleteMessage(msg, currentUserId));
+                cleaningStats.skipped += invalidMessages.length;
+
                 lastMessageId = messages[messages.length - 1].id;
-                cleaningStats.skipped += messages.length;
-                continue;
-            }
 
-            // Supprimer les messages un par un
-            for (const message of validMessages) {
-                if (shouldStopCleaning) break;
-
-                const success = await deleteMessage(channelId, message.id);
-
-                if (success) {
-                    cleaningStats.deleted++;
-                    debugLog(`✅ Message ${message.id} supprimé`);
-                } else {
-                    cleaningStats.failed++;
+                // Si on a traité moins de messages que la taille du batch, on a fini
+                if (messages.length < settings.store.batchSize) {
+                    debugLog(`Batch incomplet (${messages.length}/${settings.store.batchSize}), fin du traitement`);
+                    break;
                 }
 
-                totalProcessed++;
+            } catch (error: any) {
+                log(`❌ Erreur dans la boucle de nettoyage: ${error?.message || error}`, "error");
+                cleaningStats.failed++;
 
-                // Délai anti-rate-limit
-                await new Promise(resolve => setTimeout(resolve, settings.store.delayBetweenDeletes));
+                // Attendre un peu avant de continuer en cas d'erreur
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
-                // Mise à jour de la progression tous les 10 messages
-                if (totalProcessed % 10 === 0) {
-                    updateProgress();
+                // Si trop d'erreurs, arrêter
+                if (cleaningStats.failed > 10) {
+                    log("Trop d'erreurs, arrêt du nettoyage", "error");
+                    break;
                 }
-            }
-
-            // Messages non valides comptés comme ignorés
-            const invalidMessages = messages.filter(msg => !canDeleteMessage(msg, currentUserId));
-            cleaningStats.skipped += invalidMessages.length;
-
-            lastMessageId = messages[messages.length - 1].id;
-
-            // Si on a traité moins de messages que la taille du batch, on a fini
-            if (messages.length < settings.store.batchSize) {
-                break;
             }
         }
 
@@ -452,6 +546,13 @@ export default definePlugin({
     start() {
         log("🚀 Plugin MessageCleaner démarré");
 
+        // Test des dépendances
+        log("🔍 Test des dépendances:");
+        log(`- RestAPI: ${typeof RestAPI}`);
+        log(`- ChannelStore: ${typeof ChannelStore}`);
+        log(`- UserStore: ${typeof UserStore}`);
+        log(`- Menu: ${typeof Menu}`);
+
         // Si un canal est configuré dans les settings, proposer de le nettoyer
         if (settings.store.targetChannelId.trim()) {
             const channel = ChannelStore.getChannel(settings.store.targetChannelId);
@@ -468,7 +569,8 @@ export default definePlugin({
 • Batch: ${settings.store.batchSize}
 • Propres messages: ${settings.store.onlyOwnMessages}
 • Double-clic: ${settings.store.requireDoubleClick}
-• Age max: ${settings.store.maxAge} jours`);
+• Age max: ${settings.store.maxAge} jours
+• Mode debug: ${settings.store.debugMode}`);
 
         showNotification({
             title: "🧹 MessageCleaner activé",
