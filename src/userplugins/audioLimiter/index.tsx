@@ -5,43 +5,10 @@
  */
 
 import { definePluginSettings } from "@api/Settings";
+import { showNotification } from "@api/Notifications";
 import { findByPropsLazy } from "@webpack";
 import { React, FluxDispatcher, Forms, Slider } from "@webpack/common";
 import definePlugin, { OptionType } from "@utils/types";
-
-// Composant de fallback pour FormSection si le composant natif n'est pas trouvé
-const FormSectionFallback = ({ children, title, ...props }: any) => (
-    <div
-        className="form-section"
-        style={{
-            marginBottom: "20px",
-            padding: "16px",
-            backgroundColor: "var(--background-secondary)",
-            borderRadius: "8px",
-            border: "1px solid var(--background-tertiary)"
-        }}
-        {...props}
-    >
-        {title && <h3 style={{ margin: "0 0 12px 0", color: "var(--header-primary)" }}>{title}</h3>}
-        {children}
-    </div>
-);
-
-// Wrapper pour FormSection avec fallback automatique
-const SafeFormSection = ({ children, ...props }: any) => {
-    // Vérifier si FormSection est disponible
-    if (Forms.FormSection && typeof Forms.FormSection === 'function') {
-        try {
-            return <Forms.FormSection {...props}>{children}</Forms.FormSection>;
-        } catch (error) {
-            console.warn("FormSection error, using fallback:", error);
-        }
-    }
-
-    // Utiliser le fallback si FormSection n'est pas disponible
-    console.warn("FormSection not available, using fallback component");
-    return <FormSectionFallback {...props}>{children}</FormSectionFallback>;
-};
 
 const configModule = findByPropsLazy("getOutputVolume");
 
@@ -75,6 +42,11 @@ const settings = definePluginSettings({
     },
 
     // Paramètres d'affichage
+    showNotifications: {
+        type: OptionType.BOOLEAN,
+        default: true,
+        description: "Afficher les notifications de limitation"
+    },
     showVisualIndicator: {
         type: OptionType.BOOLEAN,
         default: true,
@@ -91,7 +63,8 @@ let limiterState = {
     compressor: null as DynamicsCompressorNode | null,
     currentLevel: 0,
     peakLevel: 0,
-    limitingCount: 0
+    limitingCount: 0,
+    lastNotification: 0
 };
 
 // Fonction pour obtenir le volume actuel
@@ -147,6 +120,15 @@ function checkAndLimitVolume() {
         setVolume(maxVolume);
         limiterState.limitingCount++;
 
+        // Notification avec throttling (max 1 par seconde)
+        const now = Date.now();
+        if (settings.store.showNotifications && now - limiterState.lastNotification > 1000) {
+            showNotification({
+                title: "Audio Limiter",
+                body: `Volume limité de ${currentVolume}% à ${maxVolume}%`
+            });
+            limiterState.lastNotification = now;
+        }
     }
 }
 
@@ -189,6 +171,12 @@ async function createAudioLimiter() {
         // Démarrer la surveillance des niveaux
         startLevelMonitoring();
 
+        if (settings.store.showNotifications) {
+            showNotification({
+                title: "Audio Limiter",
+                body: `Limitation audio activée à ${settings.store.maxDecibels} dB`
+            });
+        }
 
         return { audioContext, gainNode, analyser, compressor };
     } catch (error) {
@@ -216,6 +204,14 @@ function startLevelMonitoring() {
         if (currentLevel > settings.store.maxDecibels) {
             limiterState.limitingCount++;
 
+            const now = Date.now();
+            if (settings.store.showNotifications && now - limiterState.lastNotification > 2000) {
+                showNotification({
+                    title: "Audio Limiter - Limitation Active",
+                    body: `Niveau: ${currentLevel.toFixed(1)} dB (limite: ${settings.store.maxDecibels} dB)`
+                });
+                limiterState.lastNotification = now;
+            }
         }
 
         // Continuer la surveillance
@@ -359,7 +355,7 @@ function VisualIndicator() {
 // Composant de paramètres
 function SettingsPanel() {
     return (
-        <SafeFormSection>
+        <Forms.FormSection>
             <Forms.FormTitle>Paramètres de Limitation</Forms.FormTitle>
 
             <Forms.FormDivider />
@@ -373,10 +369,10 @@ function SettingsPanel() {
             <Forms.FormItem>
                 <Forms.FormLabel>Volume Maximum (%)</Forms.FormLabel>
                 <Slider
-                    initialValue={settings.store.maxVolume}
-                    asValueChanges={(value) => settings.store.maxVolume = value}
-                    minValue={10}
-                    maxValue={100}
+                    value={settings.store.maxVolume}
+                    onChange={(value) => settings.store.maxVolume = value}
+                    min={10}
+                    max={100}
                     markers={[50, 60, 70, 80, 90, 100]}
                     stickToMarkers={false}
                 />
@@ -388,10 +384,10 @@ function SettingsPanel() {
             <Forms.FormItem>
                 <Forms.FormLabel>Décibels Maximum (dB)</Forms.FormLabel>
                 <Slider
-                    initialValue={settings.store.maxDecibels}
-                    asValueChanges={(value) => settings.store.maxDecibels = value}
-                    minValue={-20}
-                    maxValue={0}
+                    value={settings.store.maxDecibels}
+                    onChange={(value) => settings.store.maxDecibels = value}
+                    min={-20}
+                    max={0}
                     markers={[-20, -15, -10, -6, -3, 0]}
                     stickToMarkers={false}
                 />
@@ -404,27 +400,38 @@ function SettingsPanel() {
 
             <Forms.FormItem>
                 <Forms.FormSwitch
-                    title="Activer la limitation de volume"
                     value={settings.store.enableVolumeLimiting}
                     onChange={(value) => settings.store.enableVolumeLimiting = value}
-                />
+                >
+                    Activer la limitation de volume
+                </Forms.FormSwitch>
             </Forms.FormItem>
 
             <Forms.FormItem>
                 <Forms.FormSwitch
-                    title="Activer la limitation des décibels"
                     value={settings.store.enableDbLimiting}
                     onChange={(value) => settings.store.enableDbLimiting = value}
-                />
+                >
+                    Activer la limitation des décibels
+                </Forms.FormSwitch>
             </Forms.FormItem>
-
 
             <Forms.FormItem>
                 <Forms.FormSwitch
-                    title="Afficher l'indicateur visuel"
+                    value={settings.store.showNotifications}
+                    onChange={(value) => settings.store.showNotifications = value}
+                >
+                    Afficher les notifications
+                </Forms.FormSwitch>
+            </Forms.FormItem>
+
+            <Forms.FormItem>
+                <Forms.FormSwitch
                     value={settings.store.showVisualIndicator}
                     onChange={(value) => settings.store.showVisualIndicator = value}
-                />
+                >
+                    Afficher l'indicateur visuel
+                </Forms.FormSwitch>
             </Forms.FormItem>
 
             <Forms.FormDivider />
@@ -435,7 +442,7 @@ function SettingsPanel() {
             <Forms.FormText>
                 <strong>Limitations appliquées:</strong> {limiterState.limitingCount}
             </Forms.FormText>
-        </SafeFormSection>
+        </Forms.FormSection>
     );
 }
 

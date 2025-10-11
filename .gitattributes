@@ -1,11 +1,1 @@
-# Fichiers à ne jamais merger automatiquement depuis upstream
-# Ces fichiers garderont toujours votre version locale
-
-# Vos plugins personnalisés dans userplugins/
-src/userplugins/** merge=ours
-
-# Votre plugin modifié dans equicordplugins/
-src/equicordplugins/followVoiceUser/** merge=ours
-
-# Votre personnalisation du label "Show Bashcord"
-src/components/settings/tabs/plugins/index.tsx merge=ours
+* text=auto eol=lf

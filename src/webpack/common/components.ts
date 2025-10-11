@@ -20,40 +20,19 @@ import { FormSwitchCompat } from "@components/FormSwitch";
 import { LazyComponent } from "@utils/lazyReact";
 import * as t from "@vencord/discord-types";
 import { filters, mapMangledModuleLazy, waitFor } from "@webpack";
-import { React } from "@webpack/common";
 
 import { FormText } from "./FormText";
 import { waitForComponent } from "./internal";
 
-
 const FormTitle = waitForComponent<t.FormTitle>("FormTitle", filters.componentByCode('["defaultMargin".concat', '="h5"'));
-
-// FormSection avec filtres multiples pour une meilleure compatibilité
-const FormSection = waitForComponent<t.FormSection>("FormSection", [
-    filters.componentByCode(".titleId)"),
-    filters.componentByCode("titleId"),
-    filters.componentByCode("FormSection"),
-    filters.byProps("title", "children"),
-    filters.byProps("titleId", "className"),
-    filters.byProps("title", "tag"),
-    filters.byProps("titleId", "disabled"),
-    filters.byProps("title", "htmlFor"),
-    filters.byProps("titleId", "titleClassName")
-]);
-
 const FormDivider = waitForComponent<t.FormDivider>("FormDivider", filters.componentByCode(".divider,", ",style:", '"div"', /\.divider,\i\),style:/));
-const FormItem = waitForComponent<t.FormItem>("FormItem", filters.componentByCode("FormItem"));
-const FormLabel = waitForComponent<t.FormLabel>("FormLabel", filters.componentByCode("FormLabel"));
-const FormSwitch = waitForComponent<t.FormSwitch>("FormSwitch", filters.componentByCode("FormSwitch"));
 
 export const Forms = {
     FormTitle,
     FormText,
-    FormSection,
-    FormDivider,
-    FormItem,
-    FormLabel,
-    FormSwitch
+    /** @deprecated don't use this */
+    FormSection: "section" as never, // Backwards compat since Vesktop uses this
+    FormDivider
 };
 
 export const Card = waitForComponent<t.Card>("Card", filters.componentByCode(".editable),", ".outline:"));
@@ -77,8 +56,8 @@ export const TextInput = waitForComponent<t.TextInput>("TextInput", filters.comp
 export const TextArea = waitForComponent<t.TextArea>("TextArea", filters.componentByCode("this.getPaddingRight()},id:"));
 export const Text = waitForComponent<t.Text>("Text", filters.componentByCode('case"always-white"'));
 export const Heading = waitForComponent<t.Heading>("Heading", filters.componentByCode(">6?{", "variant:"));
-export const Select = waitForComponent<t.Select>("Select", filters.componentByCode('="bottom",', ".select,", '"Escape"==='));
-export const SearchableSelect = waitForComponent<t.SearchableSelect>("SearchableSelect", filters.componentByCode(".setSelectionRange(", ".multi]:"));
+export const Select = waitForComponent<t.Select>("Select", filters.componentByCode('"Select"', ".newOptionLabel"));
+export const SearchableSelect = waitForComponent<t.SearchableSelect>("SearchableSelect", filters.componentByCode('"SearchableSelect"'));
 export const Slider = waitForComponent<t.Slider>("Slider", filters.componentByCode('"markDash".concat('));
 export const Popout = waitForComponent<t.Popout>("Popout", filters.componentByCode("ref:this.ref,", "renderPopout:this.renderPopout,"));
 export const Dialog = waitForComponent<t.Dialog>("Dialog", filters.componentByCode('role:"dialog",tabIndex:-1'));
