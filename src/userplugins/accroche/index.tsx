@@ -408,18 +408,29 @@ function startAnchorMonitoring() {
     console.log("🔍🔍🔍 DÉMARRAGE SURVEILLANCE ANCRAGE 🔍🔍🔍");
 
     anchorMonitoringInterval = setInterval(() => {
-        if (!anchoredUserInfo) return;
+        if (!anchoredUserInfo) {
+            verboseLog("🔍 Surveillance ancrage: Aucun utilisateur ancré");
+            return;
+        }
 
         const currentUser = UserStore.getCurrentUser();
-        if (!currentUser) return;
+        if (!currentUser) {
+            verboseLog("🔍 Surveillance ancrage: Utilisateur actuel non disponible");
+            return;
+        }
 
         const currentUserId = currentUser.id;
         const myVoiceState = VoiceStateStore.getVoiceStateForUser(currentUserId);
         const anchoredUserVoiceState = VoiceStateStore.getVoiceStateForUser(anchoredUserInfo.userId);
 
         if (!myVoiceState?.channelId || !anchoredUserVoiceState?.channelId) {
-            verboseLog("🔍 Surveillance ancrage: Un des utilisateurs n'est pas dans un canal vocal");
+            verboseLog(`🔍 Surveillance ancrage: Un des utilisateurs n'est pas dans un canal vocal - Vous: ${myVoiceState?.channelId || 'null'}, Ancré: ${anchoredUserVoiceState?.channelId || 'null'}`);
             return;
+        }
+
+        // Log périodique pour vérifier l'état
+        if (Math.random() < 0.1) { // 10% de chance à chaque vérification
+            verboseLog(`🔍 Surveillance ancrage: Vous: ${myVoiceState.channelId}, ${anchoredUserInfo.username}: ${anchoredUserVoiceState.channelId}`);
         }
 
         // Si on n'est pas dans le même canal que la personne ancrée
@@ -748,6 +759,7 @@ export default definePlugin({
 
         // Démarrer la surveillance périodique pour l'ancrage
         if (settings.store.enableAnchor) {
+            console.log("🔍🔍🔍 DÉMARRAGE SURVEILLANCE ANCRAGE AU START 🔍🔍🔍");
             startAnchorMonitoring();
         }
 
