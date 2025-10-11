@@ -98,6 +98,7 @@ let accrochedUserInfo: AccrochedUserInfo | null = null;
 let anchoredUserInfo: AnchoredUserInfo | null = null;
 let originalSelectVoiceChannel: any = null;
 let isPreventingMove = false;
+let anchorMonitoringInterval: NodeJS.Timeout | null = null;
 
 // Fonction de log avec préfixe
 function log(message: string, level: "info" | "warn" | "error" = "info") {
@@ -157,12 +158,16 @@ async function moveUserToVoiceChannel(userId: string, channelId: string): Promis
 }
 
 // Fonction pour accrocher un utilisateur
-function accrocherUtilisateur(userId: string, username: string) {
+async function accrocherUtilisateur(userId: string, username: string) {
+    verboseLog(`🚀 Début de la fonction accrocherUtilisateur pour ${username} (${userId})`);
+
     const currentUser = UserStore.getCurrentUser();
     if (!currentUser) {
         log("❌ Utilisateur actuel non disponible", "error");
         return;
     }
+
+    verboseLog(`✅ Utilisateur actuel trouvé: ${currentUser.username} (${currentUser.id})`);
 
     const currentUserId = currentUser.id;
     if (userId === currentUserId) {
@@ -188,9 +193,23 @@ function accrocherUtilisateur(userId: string, username: string) {
         return;
     }
 
-    // Obtenir l'état vocal actuel de l'utilisateur
-    const userVoiceState = VoiceStateStore.getVoiceStateForUser(userId);
-    const currentVoiceState = VoiceStateStore.getVoiceStateForUser(currentUserId);
+    // Obtenir l'état vocal actuel de l'utilisateur avec un délai pour laisser le temps à la connexion RTC de s'établir
+    let userVoiceState = VoiceStateStore.getVoiceStateForUser(userId);
+    let currentVoiceState = VoiceStateStore.getVoiceStateForUser(currentUserId);
+
+    verboseLog(`🔍 État vocal initial - Utilisateur: ${userVoiceState?.channelId || 'null'}, Vous: ${currentVoiceState?.channelId || 'null'}`);
+
+    // Si l'état vocal n'est pas immédiatement disponible, attendre un peu
+    if (!userVoiceState?.channelId || !currentVoiceState?.channelId) {
+        verboseLog(`⏳ État vocal non disponible immédiatement, attente de 500ms...`);
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        userVoiceState = VoiceStateStore.getVoiceStateForUser(userId);
+        currentVoiceState = VoiceStateStore.getVoiceStateForUser(currentUserId);
+
+        verboseLog(`🔍 État vocal après attente - Utilisateur: ${userVoiceState?.channelId || 'null'}, Vous: ${currentVoiceState?.channelId || 'null'}`);
+    }
 
     if (!userVoiceState?.channelId) {
         log(`❌ L'utilisateur ${username} n'est pas dans un canal vocal`, "warn");
@@ -257,12 +276,16 @@ function decrocherUtilisateur() {
 }
 
 // Fonction pour ancrer un utilisateur (le suivre)
-function ancrerUtilisateur(userId: string, username: string) {
+async function ancrerUtilisateur(userId: string, username: string) {
+    verboseLog(`🚀 Début de la fonction ancrerUtilisateur pour ${username} (${userId})`);
+
     const currentUser = UserStore.getCurrentUser();
     if (!currentUser) {
         log("❌ Utilisateur actuel non disponible", "error");
         return;
     }
+
+    verboseLog(`✅ Utilisateur actuel trouvé: ${currentUser.username} (${currentUser.id})`);
 
     const currentUserId = currentUser.id;
     if (userId === currentUserId) {
@@ -288,9 +311,23 @@ function ancrerUtilisateur(userId: string, username: string) {
         return;
     }
 
-    // Obtenir l'état vocal actuel de l'utilisateur
-    const userVoiceState = VoiceStateStore.getVoiceStateForUser(userId);
-    const currentVoiceState = VoiceStateStore.getVoiceStateForUser(currentUserId);
+    // Obtenir l'état vocal actuel de l'utilisateur avec un délai pour laisser le temps à la connexion RTC de s'établir
+    let userVoiceState = VoiceStateStore.getVoiceStateForUser(userId);
+    let currentVoiceState = VoiceStateStore.getVoiceStateForUser(currentUserId);
+
+    verboseLog(`🔍 État vocal initial (ancrage) - Utilisateur: ${userVoiceState?.channelId || 'null'}, Vous: ${currentVoiceState?.channelId || 'null'}`);
+
+    // Si l'état vocal n'est pas immédiatement disponible, attendre un peu
+    if (!userVoiceState?.channelId || !currentVoiceState?.channelId) {
+        verboseLog(`⏳ État vocal non disponible immédiatement pour l'ancrage, attente de 500ms...`);
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        userVoiceState = VoiceStateStore.getVoiceStateForUser(userId);
+        currentVoiceState = VoiceStateStore.getVoiceStateForUser(currentUserId);
+
+        verboseLog(`🔍 État vocal après attente (ancrage) - Utilisateur: ${userVoiceState?.channelId || 'null'}, Vous: ${currentVoiceState?.channelId || 'null'}`);
+    }
 
     if (!userVoiceState?.channelId) {
         log(`❌ L'utilisateur ${username} n'est pas dans un canal vocal`, "warn");
@@ -328,6 +365,9 @@ function ancrerUtilisateur(userId: string, username: string) {
 - Canal actuel: ${userVoiceState.channelId}
 - Votre canal: ${currentVoiceState.channelId}`);
 
+    // Démarrer la surveillance périodique
+    startAnchorMonitoring();
+
     if (settings.store.anchorNotifications) {
         showNotification({
             title: "⚓ Ancrage - Activé",
@@ -346,6 +386,9 @@ function desancrerUtilisateur() {
     const { username } = anchoredUserInfo;
     anchoredUserInfo = null;
 
+    // Arrêter la surveillance périodique
+    stopAnchorMonitoring();
+
     log(`⚓ Utilisateur ${username} désancré`);
 
     if (settings.store.anchorNotifications) {
@@ -356,14 +399,69 @@ function desancrerUtilisateur() {
     }
 }
 
+// Fonction pour démarrer la surveillance périodique de l'ancrage
+function startAnchorMonitoring() {
+    if (anchorMonitoringInterval) {
+        clearInterval(anchorMonitoringInterval);
+    }
+
+    console.log("🔍🔍🔍 DÉMARRAGE SURVEILLANCE ANCRAGE 🔍🔍🔍");
+
+    anchorMonitoringInterval = setInterval(() => {
+        if (!anchoredUserInfo) return;
+
+        const currentUser = UserStore.getCurrentUser();
+        if (!currentUser) return;
+
+        const currentUserId = currentUser.id;
+        const myVoiceState = VoiceStateStore.getVoiceStateForUser(currentUserId);
+        const anchoredUserVoiceState = VoiceStateStore.getVoiceStateForUser(anchoredUserInfo.userId);
+
+        if (!myVoiceState?.channelId || !anchoredUserVoiceState?.channelId) {
+            verboseLog("🔍 Surveillance ancrage: Un des utilisateurs n'est pas dans un canal vocal");
+            return;
+        }
+
+        // Si on n'est pas dans le même canal que la personne ancrée
+        if (myVoiceState.channelId !== anchoredUserVoiceState.channelId) {
+            console.log("🚨🚨🚨 SURVEILLANCE ANCRAGE - DÉPLACEMENT DÉTECTÉ 🚨🚨🚨");
+            console.log(`Vous: ${myVoiceState.channelId}, Personne ancrée: ${anchoredUserVoiceState.channelId}`);
+
+            log(`⚠️ Surveillance: Vous avez été déplacé, retour automatique vers le salon de ${anchoredUserInfo.username}`);
+
+            // Revenir dans le salon de la personne ancrée
+            setTimeout(async () => {
+                try {
+                    await moveCurrentUserToVoiceChannel(anchoredUserVoiceState.channelId);
+                } catch (error) {
+                    log(`❌ Erreur lors du retour automatique: ${error}`, "error");
+                }
+            }, settings.store.anchorDelay);
+        }
+    }, 1000); // Vérifier toutes les secondes
+}
+
+// Fonction pour arrêter la surveillance périodique de l'ancrage
+function stopAnchorMonitoring() {
+    if (anchorMonitoringInterval) {
+        console.log("🛑🛑🛑 ARRÊT SURVEILLANCE ANCRAGE 🛑🛑🛑");
+        clearInterval(anchorMonitoringInterval);
+        anchorMonitoringInterval = null;
+    }
+}
+
 // Fonction pour déplacer l'utilisateur actuel vers un canal vocal
 async function moveCurrentUserToVoiceChannel(channelId: string): Promise<void> {
+    console.log("🚀🚀🚀 DÉPLACEMENT UTILISATEUR ACTUEL VERS CANAL 🚀🚀🚀", channelId);
+
     const currentUser = UserStore.getCurrentUser();
     if (!currentUser) {
+        console.error("❌❌❌ UTILISATEUR ACTUEL NON DISPONIBLE ❌❌❌");
         throw new Error("Utilisateur actuel non disponible");
     }
 
     try {
+        console.log(`🔄 Tentative de déplacement de ${currentUser.username} vers le canal ${channelId}`);
         verboseLog(`🔄 Tentative de déplacement vers le canal ${channelId}`);
 
         // Utiliser l'API Discord pour se déplacer
@@ -390,10 +488,22 @@ async function moveCurrentUserToVoiceChannel(channelId: string): Promise<void> {
 
 // Menu contextuel pour les utilisateurs
 const UserContextMenuPatch: NavContextMenuPatchCallback = (children, { user }: { user: any; }) => {
-    if (!settings.store.enabled || !user) return;
+    console.log("🔍🔍🔍 MENU CONTEXTUEL ACCROCHE APPELÉ 🔍🔍🔍", user?.username || 'utilisateur inconnu');
+    verboseLog(`🔍 Menu contextuel appelé pour ${user?.username || 'utilisateur inconnu'}`);
+
+    if (!settings.store.enabled || !user) {
+        console.log("❌❌❌ PLUGIN DÉSACTIVÉ OU UTILISATEUR MANQUANT ❌❌❌", { enabled: settings.store.enabled, user: !!user });
+        verboseLog(`❌ Plugin désactivé ou utilisateur manquant - enabled: ${settings.store.enabled}, user: ${!!user}`);
+        return;
+    }
 
     const currentUser = UserStore.getCurrentUser();
-    if (!currentUser || user.id === currentUser.id) return;
+    if (!currentUser || user.id === currentUser.id) {
+        verboseLog(`❌ Utilisateur actuel manquant ou même utilisateur - currentUser: ${!!currentUser}, sameUser: ${user.id === currentUser?.id}`);
+        return;
+    }
+
+    verboseLog(`✅ Menu contextuel ajouté pour ${user.username}`);
 
     const isCurrentlyAccroched = accrochedUserInfo?.userId === user.id;
     const isCurrentlyAnchored = anchoredUserInfo?.userId === user.id;
@@ -403,11 +513,11 @@ const UserContextMenuPatch: NavContextMenuPatchCallback = (children, { user }: {
         React.createElement(Menu.MenuItem, {
             id: "accroche-user",
             label: isCurrentlyAccroched ? `🔓 Décrocher ${user.username}` : `🔗 Accrocher ${user.username}`,
-            action: () => {
+            action: async () => {
                 if (isCurrentlyAccroched) {
                     decrocherUtilisateur();
                 } else {
-                    accrocherUtilisateur(user.id, user.username);
+                    await accrocherUtilisateur(user.id, user.username);
                 }
             }
         })
@@ -419,11 +529,11 @@ const UserContextMenuPatch: NavContextMenuPatchCallback = (children, { user }: {
             React.createElement(Menu.MenuItem, {
                 id: "anchor-user",
                 label: isCurrentlyAnchored ? `⚓ Désancrer ${user.username}` : `⚓ Ancrer ${user.username}`,
-                action: () => {
+                action: async () => {
                     if (isCurrentlyAnchored) {
                         desancrerUtilisateur();
                     } else {
-                        ancrerUtilisateur(user.id, user.username);
+                        await ancrerUtilisateur(user.id, user.username);
                     }
                 }
             })
@@ -462,22 +572,27 @@ export default definePlugin({
 
             // Logique d'ancrage (revenir automatiquement dans le salon de la personne ancrée)
             if (anchoredUserInfo) {
+                console.log("🔍🔍🔍 ANCRAGE ACTIF - Vérification des changements de canal 🔍🔍🔍");
+                verboseLog(`⚓ Ancrage actif pour ${anchoredUserInfo.username} (${anchoredUserInfo.userId})`);
+
                 for (const voiceState of voiceStates) {
                     const { userId, channelId, oldChannelId } = voiceState;
 
                     // Détecter quand VOUS êtes déplacé (utilisateur actuel)
                     if (userId === currentUserId && channelId !== currentVoiceState.channelId) {
+                        console.log("🚨🚨🚨 DÉPLACEMENT DÉTECTÉ - ANCRAGE EN COURS 🚨🚨🚨");
+                        console.log(`Vous: ${currentUserId}, Ancien canal: ${currentVoiceState.channelId}, Nouveau canal: ${channelId}`);
                         verboseLog(`🔄 Vous avez été déplacé: ${currentVoiceState.channelId} -> ${channelId}`);
 
                         // Vérifier si la personne à qui vous êtes ancré est toujours dans un canal vocal
-                        const anchoredUserVoiceState = VoiceStateStore.getVoiceStateForUser(anchoredUserInfo.userId);
+                        const anchoredUserVoiceState = VoiceStateStore.getVoiceStateForUser(anchoredUserInfo!.userId);
 
                         if (!anchoredUserVoiceState?.channelId) {
-                            log(`🚪 ${anchoredUserInfo.username} a quitté le canal vocal, ancrage suspendu`);
+                            log(`🚪 ${anchoredUserInfo!.username} a quitté le canal vocal, ancrage suspendu`);
                             if (settings.store.anchorNotifications) {
                                 showNotification({
                                     title: "⚓ Ancrage - Suspendu",
-                                    body: `${anchoredUserInfo.username} a quitté le canal vocal`
+                                    body: `${anchoredUserInfo!.username} a quitté le canal vocal`
                                 });
                             }
                             continue;
@@ -485,7 +600,7 @@ export default definePlugin({
 
                         // Si vous n'êtes pas dans le même canal que la personne ancrée
                         if (channelId !== anchoredUserVoiceState.channelId) {
-                            log(`⚠️ Vous avez été déplacé, retour automatique vers le salon de ${anchoredUserInfo.username}`);
+                            log(`⚠️ Vous avez été déplacé, retour automatique vers le salon de ${anchoredUserInfo!.username}`);
 
                             // Attendre un délai avant de revenir dans le salon de la personne ancrée
                             setTimeout(async () => {
@@ -508,12 +623,12 @@ export default definePlugin({
                                     await moveCurrentUserToVoiceChannel(currentAnchoredState.channelId);
 
                                 } catch (error) {
-                                    log(`❌ Erreur lors du retour vers ${anchoredUserInfo.username}: ${error}`, "error");
+                                    log(`❌ Erreur lors du retour vers ${anchoredUserInfo!.username}: ${error}`, "error");
 
                                     if (settings.store.anchorNotifications) {
                                         showNotification({
                                             title: "⚓ Ancrage - Erreur",
-                                            body: `Impossible de revenir dans le salon de ${anchoredUserInfo.username}`
+                                            body: `Impossible de revenir dans le salon de ${anchoredUserInfo!.username}`
                                         });
                                     }
                                 }
@@ -530,19 +645,19 @@ export default definePlugin({
                 const { userId, channelId, oldChannelId } = voiceState;
 
                 // Détecter quand l'utilisateur accroché change de canal vocal
-                if (userId === accrochedUserInfo.userId && channelId !== accrochedUserInfo.lastChannelId) {
-                    verboseLog(`🔄 Changement de canal détecté pour ${accrochedUserInfo.username}: ${oldChannelId} -> ${channelId}`);
+                if (userId === accrochedUserInfo!.userId && channelId !== accrochedUserInfo!.lastChannelId) {
+                    verboseLog(`🔄 Changement de canal détecté pour ${accrochedUserInfo!.username}: ${oldChannelId} -> ${channelId}`);
 
                     // Mettre à jour le dernier canal connu
-                    accrochedUserInfo.lastChannelId = channelId;
+                    accrochedUserInfo!.lastChannelId = channelId || null;
 
                     // Si l'utilisateur accroché a quitté le canal vocal
                     if (!channelId) {
-                        log(`🚪 ${accrochedUserInfo.username} a quitté le canal vocal`);
+                        log(`🚪 ${accrochedUserInfo!.username} a quitté le canal vocal`);
                         if (settings.store.showNotifications) {
                             showNotification({
                                 title: "🔗 Accroche - Info",
-                                body: `${accrochedUserInfo.username} a quitté le canal vocal`
+                                body: `${accrochedUserInfo!.username} a quitté le canal vocal`
                             });
                         }
                         continue;
@@ -550,7 +665,7 @@ export default definePlugin({
 
                     // Si l'utilisateur accroché est dans un canal différent du vôtre
                     if (channelId !== currentVoiceState.channelId) {
-                        log(`⚠️ ${accrochedUserInfo.username} a changé de canal, tentative de ramener dans votre canal`);
+                        log(`⚠️ ${accrochedUserInfo!.username} a changé de canal, tentative de ramener dans votre canal`);
 
                         // Attendre un délai avant de ramener l'utilisateur
                         setTimeout(async () => {
@@ -570,15 +685,15 @@ export default definePlugin({
                                 }
 
                                 // Ramener l'utilisateur dans votre canal
-                                await moveUserToVoiceChannel(accrochedUserInfo.userId, myCurrentState.channelId);
+                                await moveUserToVoiceChannel(accrochedUserInfo!.userId, myCurrentState.channelId);
 
                             } catch (error) {
-                                log(`❌ Erreur lors du déplacement de ${accrochedUserInfo.username}: ${error}`, "error");
+                                log(`❌ Erreur lors du déplacement de ${accrochedUserInfo!.username}: ${error}`, "error");
 
                                 if (settings.store.showNotifications) {
                                     showNotification({
                                         title: "🔗 Accroche - Erreur",
-                                        body: `Impossible de ramener ${accrochedUserInfo.username} dans votre canal`
+                                        body: `Impossible de ramener ${accrochedUserInfo!.username} dans votre canal`
                                     });
                                 }
                             }
@@ -596,7 +711,7 @@ export default definePlugin({
 
                         // Si l'utilisateur accroché est dans un canal vocal différent
                         if (accrochedUserVoiceState?.channelId && accrochedUserVoiceState.channelId !== channelId) {
-                            log(`🔄 Vous avez changé de canal, déplacement de ${accrochedUserInfo.username} vers votre nouveau canal`);
+                            log(`🔄 Vous avez changé de canal, déplacement de ${accrochedUserInfo!.username} vers votre nouveau canal`);
 
                             setTimeout(async () => {
                                 try {
@@ -613,6 +728,7 @@ export default definePlugin({
     },
 
     start() {
+        console.log("🚀🚀🚀 PLUGIN ACCROCHE DÉMARRÉ 🚀🚀🚀");
         log("🚀 Plugin Accroche démarré");
         log(`⚙️ Configuration actuelle:
 - Notifications: ${settings.store.showNotifications ? "ON" : "OFF"}
@@ -622,6 +738,18 @@ export default definePlugin({
 - Ancrage activé: ${settings.store.enableAnchor ? "ON" : "OFF"}
 - Délai d'ancrage: ${settings.store.anchorDelay}ms
 - Notifications d'ancrage: ${settings.store.anchorNotifications ? "ON" : "OFF"}`);
+
+        // Vérifier que les stores sont disponibles
+        console.log("🔍 Vérification des stores:");
+        console.log("- VoiceStateStore:", !!VoiceStateStore);
+        console.log("- ChannelActions:", !!ChannelActions);
+        console.log("- UserStore:", !!UserStore);
+        console.log("- PermissionStore: non importé (normal)");
+
+        // Démarrer la surveillance périodique pour l'ancrage
+        if (settings.store.enableAnchor) {
+            startAnchorMonitoring();
+        }
 
         // Sauvegarder la fonction originale si on veut empêcher les déplacements manuels
         if (settings.store.preventSelfMove && ChannelActions) {
@@ -658,6 +786,9 @@ export default definePlugin({
 
     stop() {
         log("🛑 Plugin Accroche arrêté");
+
+        // Arrêter la surveillance périodique
+        stopAnchorMonitoring();
 
         // Restaurer la fonction originale
         if (originalSelectVoiceChannel && ChannelActions) {
