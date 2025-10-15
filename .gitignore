@@ -29,3 +29,5 @@ ExtensionCache/
 
 # vencord companion module cache
 .modules
+
+src/userplugins/antiLog/
