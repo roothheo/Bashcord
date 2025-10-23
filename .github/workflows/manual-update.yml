@@ -113,6 +113,8 @@ jobs:
         for file in "${PROTECTED_FILES[@]}"; do
           backup_file="backup_bashcord_customizations/$(basename "$file")"
           if [ -e "$backup_file" ]; then
+            # Créer le dossier parent si nécessaire
+            mkdir -p "$(dirname "$file")"
             cp -r "$backup_file" "$file"
             echo "✅ Restauré: $file"
           fi
@@ -134,8 +136,16 @@ jobs:
           plugin_count=$(find src/bashplugins -name "*.tsx" -o -name "*.ts" | wc -l)
           echo "✅ Dossier bashplugins préservé avec $plugin_count plugins"
         else
-          echo "❌ Erreur: Dossier bashplugins manquant ou vide!"
-          exit 1
+          echo "⚠️ Dossier bashplugins manquant, création..."
+          mkdir -p src/bashplugins
+          if [ -d "backup_bashcord_customizations/bashplugins" ]; then
+            cp -r backup_bashcord_customizations/bashplugins/* src/bashplugins/
+            plugin_count=$(find src/bashplugins -name "*.tsx" -o -name "*.ts" | wc -l)
+            echo "✅ Dossier bashplugins restauré avec $plugin_count plugins"
+          else
+            echo "❌ Erreur: Sauvegarde bashplugins introuvable!"
+            exit 1
+          fi
         fi
         
         if [ -f "src/components/WelcomeModal.tsx" ] && grep -q "Bashcord" src/components/WelcomeModal.tsx; then
