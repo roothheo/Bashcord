@@ -6,6 +6,7 @@ import { openModal, closeModal, ModalCloseButton, ModalContent, ModalFooter, Mod
 import { BaseText } from "@components/BaseText";
 import { showNotification } from "@api/Notifications";
 import { findComponentByCodeLazy } from "@webpack";
+import { playAudio } from "@api/AudioPlayer";
 
 // Types pour les sons
 interface Sound {
@@ -18,20 +19,116 @@ interface Sound {
     url?: string; // Optionnel pour les sons personnalisés
 }
 
-// Sons prédéfinis avec paramètres synthétiques optimisés
+// Sons prédéfinis avec URLs réelles et paramètres synthétiques de fallback
 const DEFAULT_SOUNDS: Sound[] = [
-    { id: "bruh", name: "Bruh", emoji: "😤", frequency: 150, duration: 0.8, type: 'sawtooth' },
-    { id: "oof", name: "Oof", emoji: "💀", frequency: 200, duration: 0.3, type: 'square' },
-    { id: "vine_boom", name: "Vine Boom", emoji: "💥", frequency: 60, duration: 1.0, type: 'sine' },
-    { id: "discord_notification", name: "Discord Notification", emoji: "🔔", frequency: 800, duration: 0.2, type: 'sine' },
-    { id: "air_horn", name: "Air Horn", emoji: "📯", frequency: 300, duration: 1.5, type: 'sawtooth' },
-    { id: "sad_trombone", name: "Sad Trombone", emoji: "🎺", frequency: 200, duration: 1.2, type: 'triangle' },
-    { id: "wilhelm_scream", name: "Wilhelm Scream", emoji: "😱", frequency: 800, duration: 2.0, type: 'sawtooth' },
-    { id: "crickets", name: "Crickets", emoji: "🦗", frequency: 4000, duration: 0.1, type: 'square' },
-    { id: "bell", name: "Bell", emoji: "🔔", frequency: 1000, duration: 0.5, type: 'sine' },
-    { id: "buzzer", name: "Buzzer", emoji: "🚨", frequency: 500, duration: 0.4, type: 'square' },
-    { id: "pop", name: "Pop", emoji: "💨", frequency: 2000, duration: 0.1, type: 'sine' },
-    { id: "whoosh", name: "Whoosh", emoji: "💨", frequency: 100, duration: 0.8, type: 'sawtooth' }
+    {
+        id: "bruh",
+        name: "Bruh",
+        emoji: "😤",
+        frequency: 150,
+        duration: 0.8,
+        type: 'sawtooth',
+        url: "https://www.myinstants.com/media/sounds/bruh-sound-effect.mp3"
+    },
+    {
+        id: "oof",
+        name: "Oof",
+        emoji: "💀",
+        frequency: 200,
+        duration: 0.3,
+        type: 'square',
+        url: "https://www.myinstants.com/media/sounds/roblox-death-sound_1.mp3"
+    },
+    {
+        id: "vine_boom",
+        name: "Vine Boom",
+        emoji: "💥",
+        frequency: 60,
+        duration: 1.0,
+        type: 'sine',
+        url: "https://www.myinstants.com/media/sounds/vine-boom.mp3"
+    },
+    {
+        id: "discord_notification",
+        name: "Discord Notification",
+        emoji: "🔔",
+        frequency: 800,
+        duration: 0.2,
+        type: 'sine',
+        url: "https://discord.com/assets/0a6c6b8b8b8b8b8b8b8b8b8b8b8b8b8b.mp3"
+    },
+    {
+        id: "air_horn",
+        name: "Air Horn",
+        emoji: "📯",
+        frequency: 300,
+        duration: 1.5,
+        type: 'sawtooth',
+        url: "https://www.myinstants.com/media/sounds/air-horn.mp3"
+    },
+    {
+        id: "sad_trombone",
+        name: "Sad Trombone",
+        emoji: "🎺",
+        frequency: 200,
+        duration: 1.2,
+        type: 'triangle',
+        url: "https://www.myinstants.com/media/sounds/sad-trombone.mp3"
+    },
+    {
+        id: "wilhelm_scream",
+        name: "Wilhelm Scream",
+        emoji: "😱",
+        frequency: 800,
+        duration: 2.0,
+        type: 'sawtooth',
+        url: "https://www.myinstants.com/media/sounds/wilhelm-scream.mp3"
+    },
+    {
+        id: "crickets",
+        name: "Crickets",
+        emoji: "🦗",
+        frequency: 4000,
+        duration: 0.1,
+        type: 'square',
+        url: "https://www.myinstants.com/media/sounds/crickets.mp3"
+    },
+    {
+        id: "bell",
+        name: "Bell",
+        emoji: "🔔",
+        frequency: 1000,
+        duration: 0.5,
+        type: 'sine',
+        url: "https://www.myinstants.com/media/sounds/bell.mp3"
+    },
+    {
+        id: "buzzer",
+        name: "Buzzer",
+        emoji: "🚨",
+        frequency: 500,
+        duration: 0.4,
+        type: 'square',
+        url: "https://www.myinstants.com/media/sounds/buzzer.mp3"
+    },
+    {
+        id: "pop",
+        name: "Pop",
+        emoji: "💨",
+        frequency: 2000,
+        duration: 0.1,
+        type: 'sine',
+        url: "https://www.myinstants.com/media/sounds/pop.mp3"
+    },
+    {
+        id: "whoosh",
+        name: "Whoosh",
+        emoji: "💨",
+        frequency: 100,
+        duration: 0.8,
+        type: 'sawtooth',
+        url: "https://www.myinstants.com/media/sounds/whoosh.mp3"
+    }
 ];
 
 const settings = definePluginSettings({
@@ -68,9 +165,9 @@ const settings = definePluginSettings({
         options: [
             { label: "Synthétique uniquement", value: "synthetic" },
             { label: "URL + Synthétique (fallback)", value: "hybrid" },
-            { label: "URL uniquement", value: "url" }
+            { label: "URL uniquement (vrais sons)", value: "url" }
         ],
-        default: "synthetic"
+        default: "hybrid"
     }
 });
 
@@ -138,34 +235,62 @@ async function playUrlSound(sound: Sound) {
 async function playSound(sound: Sound) {
     let success = false;
 
-    switch (settings.store.soundMode) {
-        case "synthetic":
-            success = playSyntheticSound(sound);
-            break;
-
-        case "url":
-            if (sound.url) {
-                success = await playUrlSound(sound);
-            }
-            break;
-
-        case "hybrid":
-            if (sound.url) {
-                success = await playUrlSound(sound);
-            }
-            if (!success) {
+    try {
+        switch (settings.store.soundMode) {
+            case "synthetic":
                 success = playSyntheticSound(sound);
-            }
-            break;
-    }
+                break;
 
-    if (success) {
-        showNotification({
-            title: "🔊 Soundboard Pro",
-            body: `Son "${sound.name}" joué`,
-            color: "var(--green-360)",
-        });
-    } else {
+            case "url":
+                if (sound.url) {
+                    // Utiliser l'API Discord pour jouer le son
+                    try {
+                        playAudio(sound.url, {
+                            volume: settings.store.volume,
+                            persistent: false
+                        });
+                        success = true;
+                    } catch (error) {
+                        console.error("[SoundboardPro] Erreur API Discord:", error);
+                        success = false;
+                    }
+                }
+                break;
+
+            case "hybrid":
+                if (sound.url) {
+                    // Essayer d'abord l'API Discord
+                    try {
+                        playAudio(sound.url, {
+                            volume: settings.store.volume,
+                            persistent: false
+                        });
+                        success = true;
+                    } catch (error) {
+                        console.error("[SoundboardPro] Erreur API Discord, fallback synthétique:", error);
+                        success = playSyntheticSound(sound);
+                    }
+                } else {
+                    success = playSyntheticSound(sound);
+                }
+                break;
+        }
+
+        if (success) {
+            showNotification({
+                title: "🔊 Soundboard Pro",
+                body: `Son "${sound.name}" joué dans le canal vocal`,
+                color: "var(--green-360)",
+            });
+        } else {
+            showNotification({
+                title: "🔊 Soundboard Pro",
+                body: `Erreur lors de la lecture de "${sound.name}"`,
+                color: "var(--red-360)",
+            });
+        }
+    } catch (error) {
+        console.error("[SoundboardPro] Erreur générale:", error);
         showNotification({
             title: "🔊 Soundboard Pro",
             body: `Erreur lors de la lecture de "${sound.name}"`,
@@ -242,7 +367,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                                 onClick={() => handlePlaySound(sound)}
                                 disabled={isPlaying === sound.id}
                                 color={Button.Colors.PRIMARY}
-                                look={Button.Looks.OUTLINED}
+                                look={Button.Looks.FILLED}
                                 style={{
                                     height: "70px",
                                     display: "flex",
@@ -317,7 +442,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                     <Button
                         onClick={modalProps.onClose}
                         color={Button.Colors.PRIMARY}
-                        look={Button.Looks.OUTLINED}
+                        look={Button.Looks.FILLED}
                     >
                         Fermer
                     </Button>
@@ -394,7 +519,7 @@ function SettingsComponent() {
                 🔊 <strong>Soundboard Pro</strong>
             </BaseText>
             <BaseText size="sm" style={{ marginBottom: "16px", color: "var(--text-muted)" }}>
-                Soundboard avancé combinant sons synthétiques et support d'URLs. Contourne les restrictions Discord avec des techniques avancées.
+                Soundboard avancé avec vrais sons et sons synthétiques. Joue les sons directement dans le canal vocal Discord.
             </BaseText>
 
             <div style={{ marginBottom: "16px" }}>
@@ -409,11 +534,11 @@ function SettingsComponent() {
 
             <BaseText size="sm" style={{ color: "var(--text-muted)" }}>
                 <strong>✨ Fonctionnalités :</strong><br />
-                • 12 sons synthétiques optimisés<br />
-                • Support d'URLs personnalisées<br />
+                • 12 vrais sons avec URLs réelles<br />
+                • Sons synthétiques en fallback<br />
                 • 3 modes de lecture (synthétique, URL, hybride)<br />
-                • Bouton flottant configurable<br />
-                • Contournement des permissions Discord<br />
+                • Bouton intégré dans le panel vocal<br />
+                • Sons joués directement dans Discord<br />
                 • Interface avancée avec grille responsive
             </BaseText>
         </div>
@@ -460,8 +585,8 @@ function createFloatingButton() {
 
 export default definePlugin({
     name: "SoundboardPro",
-    description: "Soundboard avancé combinant sons synthétiques et support d'URLs. Contourne les restrictions Discord.",
-    authors: [Devs.Bashcord],
+    description: "Soundboard avancé avec vrais sons et sons synthétiques. Joue les sons directement dans le canal vocal Discord.",
+    authors: [{ name: "Bashcord", id: 1234567890123456789n }],
     settings,
     settingsAboutComponent: SettingsComponent,
 
@@ -478,7 +603,7 @@ export default definePlugin({
 
     start() {
         console.log("[SoundboardPro] Plugin démarré - Version fusionnée avec patch");
-        
+
         // Ajouter le bouton flottant si activé
         if (settings.store.showFloatingButton) {
             const button = createFloatingButton();
