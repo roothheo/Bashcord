@@ -105,8 +105,8 @@ export default definePlugin({
             },
             {
                 section: "BashcordPlugins",
-                label: "Plugins",
-                searchableTitles: ["Plugins"],
+                label: "Bashplugins",
+                searchableTitles: ["Bashplugins"],
                 element: PluginsTab,
                 className: "vc-plugins",
             },

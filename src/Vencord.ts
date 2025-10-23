@@ -116,7 +116,7 @@ async function runUpdateCheck() {
     // Notifications d'update désactivées pour Bashcord
     // L'updater reste fonctionnel via l'interface des paramètres
     return;
-    
+
     const notify = (data: NotificationData) => {
         if (notifiedForUpdatesThisSession) return;
         notifiedForUpdatesThisSession = true;
