@@ -486,33 +486,6 @@ export default definePlugin({
             document.body.appendChild(button);
         }
 
-        // Fonction de test accessible depuis la console
-        (window as any).testSoundboardPro = () => {
-            console.log("🔊 SoundboardPro: Test du plugin...");
-            openSoundboardPro();
-        };
-
-        // Fonction pour jouer un son de test
-        (window as any).playTestSound = () => {
-            console.log("🔊 SoundboardPro: Lecture d'un son de test...");
-            playSound(DEFAULT_SOUNDS[0]); // Bruh
-        };
-
-        // Fonction pour tester tous les sons
-        (window as any).testAllSounds = async () => {
-            console.log("🔊 SoundboardPro: Test de tous les sons...");
-            for (let i = 0; i < DEFAULT_SOUNDS.length; i++) {
-                console.log(`🔊 Jouant: ${DEFAULT_SOUNDS[i].name}`);
-                await playSound(DEFAULT_SOUNDS[i]);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        };
-
-
-        console.log("🔊 SoundboardPro: Fonctions de test disponibles:");
-        console.log("  - testSoundboardPro() : Ouvre l'interface du soundboard");
-        console.log("  - playTestSound() : Joue le son 'Bruh'");
-        console.log("  - testAllSounds() : Joue tous les sons en séquence");
     },
 
     stop() {
