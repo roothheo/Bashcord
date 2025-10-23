@@ -1,7 +1,7 @@
 import { definePluginSettings } from "@api/Settings";
 import { Devs } from "@utils/constants";
 import definePlugin, { OptionType } from "@utils/types";
-import { Button, Flex, React, useState } from "@webpack/common";
+import { Button, Flex, React, useState, useRef } from "@webpack/common";
 import { openModal, closeModal, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalProps, ModalRoot, ModalSize } from "@utils/modal";
 import { BaseText } from "@components/BaseText";
 import { showNotification } from "@api/Notifications";
@@ -17,6 +17,8 @@ interface Sound {
     duration: number;
     type: OscillatorType;
     url?: string; // Optionnel pour les sons personnalisés
+    fileData?: ArrayBuffer; // Données du fichier pour les sons locaux
+    fileType?: string; // Type MIME du fichier
 }
 
 // Sons prédéfinis avec URLs réelles et paramètres synthétiques de fallback
@@ -226,55 +228,96 @@ async function playUrlSound(sound: Sound) {
     }
 }
 
+// Fonction pour jouer un fichier audio local
+function playLocalAudioFile(fileUrl: string, volume: number = 0.5) {
+    return new Promise<boolean>((resolve) => {
+        try {
+            const audio = new Audio(fileUrl);
+            audio.volume = volume / 100; // Convertir de 0-100 à 0-1
+            audio.preload = 'auto';
+            
+            audio.oncanplaythrough = () => {
+                console.log("[SoundboardPro] Fichier audio prêt à être joué");
+                audio.play().then(() => {
+                    console.log("[SoundboardPro] Fichier audio joué avec succès");
+                    resolve(true);
+                }).catch((error) => {
+                    console.error("[SoundboardPro] Erreur lors de la lecture du fichier:", error);
+                    resolve(false);
+                });
+            };
+            
+            audio.onerror = (error) => {
+                console.error("[SoundboardPro] Erreur de chargement du fichier audio:", error);
+                resolve(false);
+            };
+            
+            // Charger le fichier
+            audio.load();
+        } catch (error) {
+            console.error("[SoundboardPro] Erreur lors de la création de l'audio:", error);
+            resolve(false);
+        }
+    });
+}
+
 // Fonction principale pour jouer un son
 async function playSound(sound: Sound) {
     let success = false;
-
+    
     try {
-        switch (settings.store.soundMode) {
-            case "synthetic":
-                success = playSyntheticSound(sound);
-                break;
-
-            case "url":
-                if (sound.url) {
-                    // Utiliser l'API Discord pour jouer le son
-                    try {
-                        playAudio(sound.url, {
-                            volume: settings.store.volume,
-                            persistent: false
-                        });
-                        success = true;
-                    } catch (error) {
-                        console.error("[SoundboardPro] Erreur API Discord:", error);
-                        success = false;
+        // Vérifier si c'est un fichier local (blob URL)
+        const isLocalFile = sound.url?.startsWith('blob:') || false;
+        
+        if (isLocalFile && sound.url) {
+            // Pour les fichiers locaux, utiliser l'API Audio native
+            console.log("[SoundboardPro] Lecture d'un fichier local:", sound.name);
+            success = await playLocalAudioFile(sound.url, settings.store.volume);
+        } else {
+            // Pour les URLs externes, utiliser l'API Discord
+            switch (settings.store.soundMode) {
+                case "synthetic":
+                    success = playSyntheticSound(sound);
+                    break;
+                    
+                case "url":
+                    if (sound.url) {
+                        try {
+                            playAudio(sound.url, { 
+                                volume: settings.store.volume,
+                                persistent: false
+                            });
+                            success = true;
+                        } catch (error) {
+                            console.error("[SoundboardPro] Erreur API Discord:", error);
+                            success = false;
+                        }
                     }
-                }
-                break;
-
-            case "hybrid":
-                if (sound.url) {
-                    // Essayer d'abord l'API Discord
-                    try {
-                        playAudio(sound.url, {
-                            volume: settings.store.volume,
-                            persistent: false
-                        });
-                        success = true;
-                    } catch (error) {
-                        console.error("[SoundboardPro] Erreur API Discord, fallback synthétique:", error);
+                    break;
+                    
+                case "hybrid":
+                    if (sound.url) {
+                        try {
+                            playAudio(sound.url, { 
+                                volume: settings.store.volume,
+                                persistent: false
+                            });
+                            success = true;
+                        } catch (error) {
+                            console.error("[SoundboardPro] Erreur API Discord, fallback synthétique:", error);
+                            success = playSyntheticSound(sound);
+                        }
+                    } else {
                         success = playSyntheticSound(sound);
                     }
-                } else {
-                    success = playSyntheticSound(sound);
-                }
-                break;
+                    break;
+            }
         }
-
+        
         if (success) {
             showNotification({
                 title: "🔊 Soundboard Pro",
-                body: `Son "${sound.name}" joué dans le canal vocal`,
+                body: `Son "${sound.name}" joué${isLocalFile ? ' (fichier local)' : ' dans le canal vocal'}`,
                 color: "var(--green-360)",
             });
         } else {
@@ -300,7 +343,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
     const [isPlaying, setIsPlaying] = useState<string | null>(null);
     const [customSoundUrl, setCustomSoundUrl] = useState("");
     const [customSoundName, setCustomSoundName] = useState("");
-    const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handlePlaySound = async (sound: Sound) => {
         setIsPlaying(sound.id);
@@ -311,7 +354,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
     // Fonction pour ajouter un son personnalisé via URL
     const addCustomSound = () => {
         if (!customSoundUrl.trim() || !customSoundName.trim()) return;
-        
+
         const newSound: Sound = {
             id: `custom_${Date.now()}`,
             name: customSoundName,
@@ -321,11 +364,11 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
             duration: 1.0,
             type: 'sine'
         };
-        
+
         setSounds([...sounds, newSound]);
         setCustomSoundUrl("");
         setCustomSoundName("");
-        
+
         showNotification({
             title: "🔊 Soundboard Pro",
             body: "Son personnalisé ajouté !",
@@ -335,18 +378,29 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
 
     // Fonction pour ouvrir le sélecteur de fichier MP3
     const openFileSelector = () => {
-        if (fileInputRef) {
-            fileInputRef.click();
+        console.log("[SoundboardPro] openFileSelector appelé");
+        if (fileInputRef.current) {
+            console.log("[SoundboardPro] Clic sur l'input file");
+            fileInputRef.current.click();
+        } else {
+            console.error("[SoundboardPro] fileInputRef.current est null");
         }
     };
 
     // Fonction pour gérer la sélection de fichier
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        console.log("[SoundboardPro] handleFileSelect appelé", event.target.files);
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file) {
+            console.log("[SoundboardPro] Aucun fichier sélectionné");
+            return;
+        }
+
+        console.log("[SoundboardPro] Fichier sélectionné:", file.name, file.type, file.size);
 
         // Vérifier que c'est un fichier audio
         if (!file.type.startsWith('audio/')) {
+            console.log("[SoundboardPro] Type de fichier non supporté:", file.type);
             showNotification({
                 title: "🔊 Soundboard Pro",
                 body: "Veuillez sélectionner un fichier audio (MP3, WAV, OGG, etc.)",
@@ -355,33 +409,40 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
             return;
         }
 
-        // Créer une URL pour le fichier
-        const fileUrl = URL.createObjectURL(file);
-        
         // Extraire le nom du fichier sans extension
         const fileName = file.name.replace(/\.[^/.]+$/, "");
         
-        const newSound: Sound = {
-            id: `file_${Date.now()}`,
-            name: fileName,
-            emoji: "🎵",
-            url: fileUrl,
-            frequency: 440,
-            duration: 1.0,
-            type: 'sine'
+        // Convertir le fichier en ArrayBuffer pour le stocker
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            if (arrayBuffer) {
+                const newSound: Sound = {
+                    id: `file_${Date.now()}`,
+                    name: fileName,
+                    emoji: "🎵",
+                    url: "", // Pas d'URL pour les fichiers locaux
+                    frequency: 440,
+                    duration: 1.0,
+                    type: 'sine',
+                    fileData: arrayBuffer, // Stocker les données du fichier
+                    fileType: file.type
+                };
+                
+                setSounds([...sounds, newSound]);
+                
+                showNotification({
+                    title: "🔊 Soundboard Pro",
+                    body: `Fichier "${fileName}" ajouté au soundboard !`,
+                    color: "var(--green-360)",
+                });
+            }
         };
-        
-        setSounds([...sounds, newSound]);
-        
-        showNotification({
-            title: "🔊 Soundboard Pro",
-            body: `Fichier "${fileName}" ajouté au soundboard !`,
-            color: "var(--green-360)",
-        });
+        reader.readAsArrayBuffer(file);
 
         // Réinitialiser l'input
-        if (fileInputRef) {
-            fileInputRef.value = '';
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
         }
     };
 
@@ -398,6 +459,9 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                 <BaseText size="md" style={{ marginBottom: "16px", color: "var(--text-muted)" }}>
                     Soundboard avancé avec sons synthétiques et support d'URLs. Contourne les restrictions Discord.
                 </BaseText>
+                <BaseText size="sm" style={{ color: "var(--text-muted)", marginBottom: "16px" }}>
+                    📁 = Fichier local • 🎵 = URL externe • 🔊 = En cours de lecture
+                </BaseText>
 
                 {/* Sons prédéfinis */}
                 <div style={{ marginBottom: "24px" }}>
@@ -409,50 +473,55 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                         gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
                         gap: "8px"
                     }}>
-                        {sounds.map(sound => (
-                            <Button
-                                key={sound.id}
-                                onClick={() => handlePlaySound(sound)}
-                                disabled={isPlaying === sound.id}
-                                color={Button.Colors.PRIMARY}
-                                look={Button.Looks.FILLED}
-                                style={{
-                                    height: "70px",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "4px"
-                                }}
-                            >
-                                <span style={{ fontSize: "20px" }}>{sound.emoji}</span>
-                                <span style={{ fontSize: "11px" }}>{sound.name}</span>
-                                {isPlaying === sound.id && <span style={{ fontSize: "10px" }}>🔊</span>}
-                                {sound.id.startsWith('custom_') && <span style={{ fontSize: "8px", color: "var(--text-muted)" }}>🎵</span>}
-                            </Button>
-                        ))}
+                        {sounds.map(sound => {
+                            const isLocalFile = sound.url?.startsWith('blob:') || false;
+                            return (
+                                <Button
+                                    key={sound.id}
+                                    onClick={() => handlePlaySound(sound)}
+                                    disabled={isPlaying === sound.id}
+                                    color={Button.Colors.PRIMARY}
+                                    look={Button.Looks.FILLED}
+                                    style={{
+                                        height: "70px",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "4px",
+                                        border: isLocalFile ? "2px solid var(--green-360)" : "none"
+                                    }}
+                                >
+                                    <span style={{ fontSize: "20px" }}>{sound.emoji}</span>
+                                    <span style={{ fontSize: "11px" }}>{sound.name}</span>
+                                    {isPlaying === sound.id && <span style={{ fontSize: "10px" }}>🔊</span>}
+                                    {isLocalFile && <span style={{ fontSize: "8px", color: "var(--green-360)" }}>📁</span>}
+                                    {sound.id.startsWith('custom_') && !isLocalFile && <span style={{ fontSize: "8px", color: "var(--text-muted)" }}>🎵</span>}
+                                </Button>
+                            );
+                        })}
                     </div>
                 </div>
 
                 {/* Ajout de son personnalisé */}
                 {settings.store.enableCustomSounds && (
-                    <div style={{ 
-                        borderTop: "1px solid var(--background-modifier-accent)", 
-                        paddingTop: "16px" 
+                    <div style={{
+                        borderTop: "1px solid var(--background-modifier-accent)",
+                        paddingTop: "16px"
                     }}>
                         <BaseText size="md" weight="semibold" style={{ marginBottom: "12px" }}>
                             ➕ Ajouter un Son Personnalisé
                         </BaseText>
-                        
+
                         {/* Input file caché */}
                         <input
-                            ref={setFileInputRef}
+                            ref={fileInputRef}
                             type="file"
                             accept="audio/*"
                             onChange={handleFileSelect}
                             style={{ display: "none" }}
                         />
-                        
+
                         <Flex direction={Flex.Direction.VERTICAL} style={{ gap: "8px" }}>
                             {/* Bouton pour sélectionner un fichier MP3 */}
                             <Button
@@ -463,11 +532,11 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                             >
                                 📁 Sélectionner un fichier MP3
                             </Button>
-                            
+
                             <BaseText size="sm" style={{ color: "var(--text-muted)", textAlign: "center" }}>
                                 ou
                             </BaseText>
-                            
+
                             {/* Ajout via URL */}
                             <input
                                 type="text"
