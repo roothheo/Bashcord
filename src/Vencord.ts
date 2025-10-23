@@ -37,6 +37,7 @@ import { openUpdaterModal } from "@components/settings/tabs/updater";
 import { IS_WINDOWS } from "@utils/constants";
 import { createAndAppendStyle } from "@utils/css";
 import { StartAt } from "@utils/types";
+import { openWelcomeModal } from "./components/WelcomeModal";
 
 import { get as dsGet } from "./api/DataStore";
 import { NotificationData, showNotification } from "./api/Notifications";
@@ -154,24 +155,18 @@ async function runUpdateCheck() {
     }
 }
 
+
 async function init() {
     await onceReady;
     startAllPlugins(StartAt.WebpackReady);
 
     syncSettings();
 
-    // Notification de bienvenue Bashcord
+    // Popup de bienvenue Bashcord
     setTimeout(() => {
         const hasShownWelcome = localStorage.getItem("bashcord-welcome-shown");
         if (!hasShownWelcome) {
-            showNotification({
-                title: "🎉 Bienvenue sur Bashcord !",
-                body: "Rejoignez notre serveur Discord pour obtenir de l'aide, des mises à jour et partager vos créations !",
-                permanent: true,
-                onClick: () => {
-                    window.open("https://discord.gg/GxbcPKKCnS", "_blank");
-                }
-            });
+            openWelcomeModal();
             localStorage.setItem("bashcord-welcome-shown", "true");
         }
     }, 3000);
