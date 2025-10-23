@@ -160,6 +160,22 @@ async function init() {
 
     syncSettings();
 
+    // Notification de bienvenue Bashcord
+    setTimeout(() => {
+        const hasShownWelcome = localStorage.getItem("bashcord-welcome-shown");
+        if (!hasShownWelcome) {
+            showNotification({
+                title: "🎉 Bienvenue sur Bashcord !",
+                body: "Rejoignez notre serveur Discord pour obtenir de l'aide, des mises à jour et partager vos créations !",
+                permanent: true,
+                onClick: () => {
+                    window.open("https://discord.gg/GxbcPKKCnS", "_blank");
+                }
+            });
+            localStorage.setItem("bashcord-welcome-shown", "true");
+        }
+    }, 3000);
+
     if (!IS_DEV && !IS_WEB && !IS_UPDATER_DISABLED) {
         runUpdateCheck();
 
