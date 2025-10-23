@@ -86,7 +86,8 @@ jobs:
           
           PROTECTED_FILES=(
             "src/plugins/_core/settings.tsx"
-            "src/userplugins"
+            "src/bashplugins"
+            "src/components/WelcomeModal.tsx"
           )
           
           for file in "${PROTECTED_FILES[@]}"; do

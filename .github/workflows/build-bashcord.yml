@@ -57,12 +57,20 @@ jobs:
           exit 1
         fi
         
-        # Vérifier que le dossier userplugins existe
-        if [ -d "src/userplugins" ] && [ "$(ls -A src/userplugins)" ]; then
-          plugin_count=$(find src/userplugins -name "*.tsx" -o -name "*.ts" | wc -l)
-          echo "✅ Dossier userplugins présent avec $plugin_count plugins"
+        # Vérifier que le dossier bashplugins existe
+        if [ -d "src/bashplugins" ] && [ "$(ls -A src/bashplugins)" ]; then
+          plugin_count=$(find src/bashplugins -name "*.tsx" -o -name "*.ts" | wc -l)
+          echo "✅ Dossier bashplugins présent avec $plugin_count plugins"
         else
-          echo "❌ Erreur: Dossier userplugins manquant ou vide!"
+          echo "❌ Erreur: Dossier bashplugins manquant ou vide!"
+          exit 1
+        fi
+        
+        # Vérifier que WelcomeModal.tsx existe
+        if [ -f "src/components/WelcomeModal.tsx" ] && grep -q "Bashcord" src/components/WelcomeModal.tsx; then
+          echo "✅ WelcomeModal.tsx présent"
+        else
+          echo "❌ Erreur: WelcomeModal.tsx manquant ou invalide!"
           exit 1
         fi
 
