@@ -1,0 +1,65 @@
+name: Publish
+on:
+    release:
+        types: [published]
+
+env:
+    FORCE_COLOR: true
+
+jobs:
+    Publish:
+        name: Publish Bashcord
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v3
+
+            - name: Use Node.js 20
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build web
+              run: pnpm buildWebStandalone
+
+            - name: Build
+              run: pnpm buildStandalone
+
+            - name: Generate plugin lists
+              run: |
+                  pnpm generatePluginJson dist/plugins.json
+                  pnpm generateEquicordPluginJson dist/equicordplugins.json
+                  pnpm generateVencordPluginJson dist/vencordplugins.json
+                  pnpm generateDevsList dist/devs.json
+
+            - name: Collect files to be released
+              run: |
+                  cd dist
+                  mkdir release
+
+                  cp browser/browser.* release
+                  cp Vencord.user.{js,js.LEGAL.txt} release
+
+                  # copy the plugin data jsons, the extension zips and the desktop/vesktop asars
+                  cp *.{json,zip,asar} release
+
+                  # legacy un-asared files
+                  cp desktop/* release
+                  for file in bashcord/*; do
+                    filename=$(basename "$file")
+                    cp "$file" "release/bashcord${filename^}"
+                  done
+
+                  find release -size 0 -delete
+                  rm release/package.json
+                  rm release/*.map
+
+            - name: Upload release assets
+              run: |
+                  gh release upload ${{ github.event.release.tag_name }} --clobber dist/release/*

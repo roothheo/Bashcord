@@ -36,7 +36,8 @@
         "lint:fix": "pnpm lint --fix",
         "test": "pnpm buildStandalone && pnpm testTsc && pnpm lint:fix && pnpm lint-styles && pnpm generatePluginJson",
         "testWeb": "pnpm lint && pnpm buildWeb && pnpm testTsc",
-        "testTsc": "tsc --noEmit"
+        "testTsc": "tsc --noEmit",
+        "type-check": "tsc --noEmit"
     },
     "dependencies": {
         "@ffmpeg/ffmpeg": "^0.12.10",
