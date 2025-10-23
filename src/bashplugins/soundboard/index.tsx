@@ -6,6 +6,7 @@ import { Button, Flex, React, useState, useEffect } from "@webpack/common";
 import { openModal, closeModal, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalProps, ModalRoot, ModalSize } from "@utils/modal";
 import { BaseText } from "@components/BaseText";
 import { showNotification } from "@api/Notifications";
+import { addButton, removeButton } from "@api/MessagePopover";
 
 // Types pour les sons
 interface Sound {
@@ -15,16 +16,16 @@ interface Sound {
     emoji: string;
 }
 
-// Sons prédéfinis
+// Sons prédéfinis - Sons synthétiques simples
 const DEFAULT_SOUNDS: Sound[] = [
-    { id: "bruh", name: "Bruh", url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", emoji: "😤" },
-    { id: "oof", name: "Oof", url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", emoji: "💀" },
-    { id: "vine_boom", name: "Vine Boom", url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", emoji: "💥" },
-    { id: "discord_notification", name: "Discord Notification", url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", emoji: "🔔" },
-    { id: "air_horn", name: "Air Horn", url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", emoji: "📯" },
-    { id: "sad_trombone", name: "Sad Trombone", url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", emoji: "🎺" },
-    { id: "wilhelm_scream", name: "Wilhelm Scream", url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", emoji: "😱" },
-    { id: "crickets", name: "Crickets", url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav", emoji: "🦗" }
+    { id: "bruh", name: "Bruh", url: "", emoji: "😤" },
+    { id: "oof", name: "Oof", url: "", emoji: "💀" },
+    { id: "vine_boom", name: "Vine Boom", url: "", emoji: "💥" },
+    { id: "discord_notification", name: "Discord Notification", url: "", emoji: "🔔" },
+    { id: "air_horn", name: "Air Horn", url: "", emoji: "📯" },
+    { id: "sad_trombone", name: "Sad Trombone", url: "", emoji: "🎺" },
+    { id: "wilhelm_scream", name: "Wilhelm Scream", url: "", emoji: "😱" },
+    { id: "crickets", name: "Crickets", url: "", emoji: "🦗" }
 ];
 
 const settings = definePluginSettings({
