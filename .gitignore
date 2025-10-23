@@ -22,7 +22,7 @@ lerna-debug.log*
 *.tsbuildinfo
 
 .modules/
-
+src/userplugins
 
 ExtensionCache/
 /settings
@@ -30,4 +30,5 @@ ExtensionCache/
 # vencord companion module cache
 .modules
 
-src/userplugins/antiLog/
+# wakatime related stuff
+.wakatime-project

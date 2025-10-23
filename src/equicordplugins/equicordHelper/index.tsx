@@ -70,7 +70,7 @@ export default definePlugin({
         },
         // Remove DM Context Menu
         {
-            find: "#{intl::d+e27u::raw}",
+            find: "#{intl::DM_OPTIONS}",
             predicate: () => settings.store.disableDMContextMenu,
 
             replacement: {
@@ -113,7 +113,19 @@ export default definePlugin({
                 match: /null==\i\|\|/,
                 replace: "true||$&"
             },
-        }
+        },
+        ...[
+            ".DEVELOPER_SECTION,",
+            '"LegacySettingsSidebarItem"'
+        ].map(find => ({
+            find,
+            replacement: [
+                {
+                    match: /\i\.\i\.isDeveloper/,
+                    replace: "true"
+                },
+            ]
+        })),
     ],
     renderMessageAccessory(props) {
         return (

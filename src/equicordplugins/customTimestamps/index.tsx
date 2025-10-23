@@ -7,14 +7,17 @@
 import "./style.css";
 
 import { definePluginSettings, useSettings } from "@api/Settings";
+import { Divider } from "@components/Divider";
 import ErrorBoundary from "@components/ErrorBoundary";
+import { Heading, HeadingPrimary } from "@components/Heading";
 import { Link } from "@components/Link";
+import { Paragraph } from "@components/Paragraph";
 import { Devs, EquicordDevs } from "@utils/constants";
 import { Margins } from "@utils/margins";
 import { useForceUpdater } from "@utils/react";
 import definePlugin, { OptionType } from "@utils/types";
 import { findByCodeLazy, findComponentByCodeLazy } from "@webpack";
-import { Forms, moment, TextInput, useEffect, useRef, UserStore, useState } from "@webpack/common";
+import { moment, TextInput, useEffect, useRef, UserStore, useState } from "@webpack/common";
 
 type TimeFormat = {
     name: string;
@@ -112,8 +115,8 @@ const TimeRow = (props: TimeRowProps) => {
 
     return (
         <>
-            <Forms.FormTitle tag="h5">{props.format.name}</Forms.FormTitle>
-            <Forms.FormText>{props.format.description}</Forms.FormText>
+            <Heading>{props.format.name}</Heading>
+            <Paragraph>{props.format.description}</Paragraph>
             <TextInput value={state} onChange={handleChange} />
         </>
     );
@@ -149,10 +152,10 @@ const DemoMessage = (props: { msgId, compact, message, date: Date | undefined, i
             />
         </div>
     ) : <div className="vc-cmt-demo-message">
-        <Forms.FormText>
+        <Paragraph>
             {/* @ts-ignore */}
             <b>Preview:</b> {Vencord.Plugins.plugins.CustomTimestamps.renderTimestamp(date, "cozy")}
-        </Forms.FormText>
+        </Paragraph>
     </div>;
 };
 
@@ -198,11 +201,11 @@ const settings = definePluginSettings({
                         <section key={key}>
                             {key === "sameDayFormat" && (
                                 <div className={Margins.bottom20}>
-                                    <Forms.FormDivider style={{ marginBottom: "10px" }} />
-                                    <Forms.FormTitle tag="h1">Calendar formats</Forms.FormTitle>
-                                    <Forms.FormText>
+                                    <Divider style={{ marginBottom: "10px" }} />
+                                    <Heading tag="h1">Calendar formats</Heading>
+                                    <Paragraph>
                                         How to format the [calendar] value if used in the above timestamps.
-                                    </Forms.FormText>
+                                    </Paragraph>
                                 </div>
                             )}
                             <TimeRow
@@ -236,8 +239,8 @@ export default definePlugin({
     settings,
     settingsAboutComponent: () => (
         <div className={"vc-cmt-info-card"}>
-            <Forms.FormTitle tag="h2">How to use:</Forms.FormTitle>
-            <Forms.FormText>
+            <HeadingPrimary>How to use:</HeadingPrimary>
+            <Paragraph>
                 <Link href="https://momentjs.com/docs/#/displaying/format/">Moment.js formatting documentation</Link>
                 <div className={Margins.top8}>
                     Additionally you can use these in your inputs:<br />
@@ -245,7 +248,7 @@ export default definePlugin({
                     as &quot;Today&quot; or &quot;Yesterday&quot;.<br />
                     <b>[relative]</b> gives you times such as &quot;4 hours ago&quot;.<br />
                 </div>
-            </Forms.FormText>
+            </Paragraph>
         </div>
     ),
     patches: [
@@ -254,18 +257,18 @@ export default definePlugin({
             replacement: [
                 {
                     // Aria label on timestamps
-                    match: /\i.useMemo\(\(\)=>\(0,\i\.\i\)\((\i)\),\[\i]\),/,
-                    replace: "$self.renderTimestamp($1,'ariaLabel'),"
+                    match: /\i.useMemo\(.{0,10}\i\.\i\)\(.{0,10}\]\)/,
+                    replace: "$self.renderTimestamp(arguments[0].timestamp,'ariaLabel')"
                 },
                 {
                     // Timestamps on messages
-                    match: /\i\.useMemo\(\(\)=>null!=\i\?\(0,\i\.\i\)\(\i,\i\):(\i)\?\(0,\i\.\i\)\((\i),"LT"\):\(0,\i\.\i\)\(\i,!0\),\[\i,\i,\i]\)/,
-                    replace: "$self.renderTimestamp($2,$1?'compact':'cozy')",
+                    match: /\i\.useMemo\(.{0,50}"LT".{0,30}\]\)/,
+                    replace: "$self.renderTimestamp(arguments[0].timestamp,arguments[0].compact?'compact':'cozy')",
                 },
                 {
                     // Tooltips when hovering over message timestamps
-                    match: /__unsupportedReactNodeAsText:\(0,\i.\i\)\((\i),"LLLL"\)/,
-                    replace: "text:$self.renderTimestamp($1,'tooltip')",
+                    match: /(__unsupportedReactNodeAsText:).{0,25}"LLLL"\)/,
+                    replace: "$1$self.renderTimestamp(arguments[0].timestamp,'tooltip')",
                 },
             ]
         },
@@ -273,8 +276,8 @@ export default definePlugin({
             find: ".full,children:",
             replacement: {
                 // Tooltips for timestamp markdown (e.g. <t:1234567890>)
-                match: /(\i).full/,
-                replace: "$self.renderTimestamp(new Date($1.timestamp*1000),'tooltip')"
+                match: /(__unsupportedReactNodeAsText:)\i.full/,
+                replace: "$1$self.renderTimestamp(new Date(arguments[0].node.timestamp*1000),'tooltip')"
             }
         }
     ],

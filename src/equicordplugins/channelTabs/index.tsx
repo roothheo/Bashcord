@@ -28,7 +28,7 @@ const contextMenuPatch: NavContextMenuPatchCallback = (children, props: { channe
             action={() => createTab({
                 guildId: channel.guild_id || "@me", // Normalize for DMs/Group Chats
                 channelId: channel.id
-            }, settings.store.openInNewTabAutoSwitch, messageId)}
+            }, settings.store.openInNewTabAutoSwitch, messageId, true, true)} // The true values are important for bypassing tab limits
         />
     );
 };
@@ -45,7 +45,7 @@ export default definePlugin({
     patches: [
         // add the channel tab container at the top
         {
-            find: ".COLLECTIBLES_SHOP_FULLSCREEN))",
+            find: '"AppView"',
             replacement: {
                 match: /(\?void 0:(\i)\.channelId.{0,300})"div",{/,
                 replace: "$1$self.render,{currentChannel:$2,"

@@ -6,10 +6,12 @@
 
 // alot of the code is from LastFMRichPresence
 import { definePluginSettings } from "@api/Settings";
+import { HeadingSecondary } from "@components/Heading";
+import { Paragraph } from "@components/Paragraph";
 import { Devs, EquicordDevs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import definePlugin, { OptionType } from "@utils/types";
-import { ApplicationAssetUtils, FluxDispatcher, Forms, showToast } from "@webpack/common";
+import { ApplicationAssetUtils, FluxDispatcher, showToast } from "@webpack/common";
 
 
 interface ActivityAssets {
@@ -54,6 +56,7 @@ interface MediaData {
     imageUrl?: string;
     duration?: number;
     position?: number;
+    isPaused?: boolean;
 }
 
 const settings = definePluginSettings({
@@ -82,18 +85,32 @@ const settings = definePluginSettings({
         description: "Custom Rich Presence name (only used if 'Custom' is selected).\nOptions: {name}, {series}, {season}, {episode}, {artist}, {album}, {year}",
         type: OptionType.STRING,
     },
+    coverType: {
+        description: "Choose which cover to display when watching a TV show",
+        type: OptionType.SELECT,
+        options: [
+            { label: "Series Cover", value: "series", default: true },
+            { label: "Episode Cover", value: "episode" },
+        ],
+    },
+    episodeFormat: {
+        description: "Episode number format",
+        type: OptionType.SELECT,
+        options: [
+            { label: "S01E01", value: "long", default: true },
+            { label: "1x01", value: "short" },
+            { label: "Season 1 Episode 1", value: "fulltext" },
+        ],
+    },
+    showEpisodeName: {
+        description: "Show episode name after season/episode info",
+        type: OptionType.BOOLEAN,
+        default: false,
+    },
     showTMDBButton: {
         description: "Show TheMovieDB button in Rich Presence",
         type: OptionType.BOOLEAN,
         default: true,
-    },
-    posterSource: {
-        description: "Choose which poster to display in Rich Presence",
-        type: OptionType.SELECT,
-        options: [
-            { label: "Jellyfin", value: "jellyfin", default: true },
-            { label: "TheMovieDB", value: "tmdb" },
-        ],
     },
     overrideRichPresenceType: {
         description: "Override the rich presence type",
@@ -122,6 +139,16 @@ const settings = definePluginSettings({
             },
         ],
     },
+    showPausedState: {
+        description: "Show Rich Presence when media is paused",
+        type: OptionType.BOOLEAN,
+        default: true,
+    },
+    privacyMode: {
+        description: "Privacy Mode (Hide media details like Episode/Song Name)",
+        type: OptionType.BOOLEAN,
+        default: false,
+    },
 });
 
 const applicationId = "1381368130164625469";
@@ -140,36 +167,15 @@ function setActivity(activity: Activity | null) {
     });
 }
 
-async function fetchTmdbData(query: string) {
-    try {
-        const res = await fetch(`https://api.vmohammad.dev/tmdb/search/multi?q=${encodeURIComponent(query)}`);
-        if (!res.ok) throw `${res.status} ${res.statusText}`;
-        const data = await res.json();
-        if (data.results && data.results.length > 0) {
-            const topResult = data.results[0];
-            return {
-                url: `https://www.themoviedb.org/${topResult.media_type}/${topResult.id}`,
-                posterPath: topResult.poster_path
-                    ? `https://image.tmdb.org/t/p/original${topResult.poster_path}`
-                    : null
-            };
-        }
-        return null;
-    } catch (e) {
-        console.error("Failed to fetch TMDb data:", e);
-        return null;
-    }
-}
-
 export default definePlugin({
     name: "JellyfinRichPresence",
     description: "Rich presence for Jellyfin media server",
-    authors: [EquicordDevs.vmohammad, Devs.SerStars],
+    authors: [EquicordDevs.vmohammad, Devs.SerStars, EquicordDevs.ZcraftElite],
 
     settingsAboutComponent: () => (
         <>
-            <Forms.FormTitle tag="h3">How to get an API key</Forms.FormTitle>
-            <Forms.FormText>
+            <HeadingSecondary>How to get an API key</HeadingSecondary>
+            <Paragraph>
                 Auth token can be found by following these steps:
                 <ol style={{ marginTop: 8, marginBottom: 8, paddingLeft: 20 }}>
                     <li>1. Log into your Jellyfin instance</li>
@@ -186,7 +192,7 @@ export default definePlugin({
                 </ol>
                 <br />
                 You'll also need your User ID, which can be found in the url of your user profile page.
-            </Forms.FormText>
+            </Paragraph>
         </>
     ),
 
@@ -227,10 +233,16 @@ export default definePlugin({
             const item = userSession.NowPlayingItem;
             const playState = userSession.PlayState;
 
-            if (playState?.IsPaused) return null;
+            if (playState?.IsPaused && !settings.store.showPausedState) return null;
 
             const imageUrl = item.ImageTags?.Primary
-                ? `${baseUrl}/Items/${item.Id}/Images/Primary`
+                ? `${baseUrl}/Items/${
+                    item.Type === "Episode" &&
+                    item.SeriesId &&
+                    settings.store.coverType === "series"
+                        ? item.SeriesId
+                        : item.Id
+                }/Images/Primary`
                 : undefined;
 
             return {
@@ -245,7 +257,8 @@ export default definePlugin({
                 url: `${baseUrl}/web/#!/details?id=${item.Id}`,
                 imageUrl,
                 duration: item.RunTimeTicks ? Math.floor(item.RunTimeTicks / 10000000) : undefined,
-                position: playState?.PositionTicks ? Math.floor(playState.PositionTicks / 10000000) : undefined
+                position: playState?.PositionTicks ? Math.floor(playState.PositionTicks / 10000000) : undefined,
+                isPaused: !!playState?.IsPaused,
             };
         } catch (e) {
             logger.error("Failed to query Jellyfin API", e);
@@ -292,70 +305,101 @@ export default definePlugin({
         switch (nameSetting) {
             case "full":
                 if (mediaData.type === "Episode" && mediaData.seriesName) {
-                    appName = `${mediaData.seriesName} - ${mediaData.name}`;
+                    appName = settings.store.privacyMode
+                        ? `${mediaData.seriesName} - [Episode Hidden]`
+                        : `${mediaData.seriesName} - ${mediaData.name}`;
                 } else if (mediaData.type === "Audio") {
-                    appName = `${mediaData.artist || "Unknown Artist"} - ${mediaData.name}`;
+                    appName = settings.store.privacyMode
+                        ? "[Track Hidden]"
+                        : `${mediaData.artist || "Unknown Artist"} - ${mediaData.name}`;
                 } else {
-                    appName = mediaData.name || "Jellyfin";
+                    appName = settings.store.privacyMode
+                        ? "[Movie Hidden]"
+                        : mediaData.name || "Jellyfin";
                 }
                 break;
             case "custom":
-                appName = templateReplace(settings.store.customName || "{name} on Jellyfish");
+                appName = templateReplace(settings.store.customName || "{name} on Jellyfin");
+                if (settings.store.privacyMode) {
+                    appName = appName
+                        .replace(mediaData.name || "", "[Title Hidden]")
+                        .replace(mediaData.seriesName || "", "[Series Hidden]")
+                        .replace(mediaData.artist || "", "[Artist Hidden]")
+                        .replace(mediaData.album || "", "[Album Hidden]");
+                }
                 break;
             case "default":
             default:
                 if (mediaData.type === "Episode" && mediaData.seriesName) {
                     appName = mediaData.seriesName;
                 } else {
-                    appName = mediaData.name || "Jellyfin";
+                    appName = settings.store.privacyMode
+                        ? "[Media Hidden]"
+                        : mediaData.name || "Jellyfin";
                 }
                 break;
         }
 
-        let tmdbData: { url: string; posterPath?: string | null } | null = null;
-        if (settings.store.showTMDBButton) {
-            tmdbData = await fetchTmdbData(mediaData.seriesName || mediaData.name);
-        }
-
         const assets: ActivityAssets = {
-            large_image:
-                settings.store.posterSource === "tmdb"
-                    ? (tmdbData?.posterPath
-                        ? await getApplicationAsset(tmdbData.posterPath)
-                        : undefined)
-                    : (mediaData.imageUrl
-                        ? await getApplicationAsset(mediaData.imageUrl)
-                        : undefined),
+            large_image: (mediaData.imageUrl
+                ? await getApplicationAsset(mediaData.imageUrl)
+                : undefined),
             large_text: mediaData.seriesName || mediaData.album || undefined,
         };
 
-        const buttons: ActivityButton[] = [];
-        if (settings.store.showTMDBButton) {
-            const result = await fetchTmdbData(mediaData.seriesName || mediaData.name);
-            if (result?.url) tmdbData = { url: result.url };
-            buttons.push({
-                label: "View on TheMovieDB",
-                url: `${tmdbData?.url}`
-            });
+        if (settings.store.privacyMode) {
+            assets.large_image = undefined;
         }
+
+        const buttons: ActivityButton[] = [];
 
         const getDetails = () => {
             if (mediaData.type === "Episode" && mediaData.seriesName) {
-                return mediaData.seriesName;
+                return settings.store.privacyMode ? "Watching a TV Show" : mediaData.seriesName;
             }
-            return mediaData.name;
+            return settings.store.privacyMode ? "Watching Something" : mediaData.name;
         };
 
         const getState = () => {
+            if (mediaData.isPaused) {
+                return "Paused";
+            }
             if (mediaData.type === "Episode" && mediaData.seriesName) {
-                const season = mediaData.seasonNumber ? `S${mediaData.seasonNumber}` : "";
-                const episode = mediaData.episodeNumber ? `E${mediaData.episodeNumber}` : "";
-                return `${mediaData.name} (${season} - ${episode})`.trim();
+                let episodeFormat = "";
+                const season = mediaData.seasonNumber;
+                const episode = mediaData.episodeNumber;
+                const format = settings.store.episodeFormat || "long";
+
+                if (season != null && episode != null) {
+                    switch (format) {
+                        case "long":
+                            episodeFormat = `S${season.toString().padStart(2, "0")}E${episode.toString().padStart(2, "0")}`;
+                            break;
+                        case "short":
+                            episodeFormat = `${season}x${episode.toString().padStart(2, "0")}`;
+                            break;
+                        case "fulltext":
+                            episodeFormat = `Season ${season} Episode ${episode}`;
+                            break;
+                    }
+                } else if (season != null) {
+                    episodeFormat = format === "fulltext" ? `Season ${season}` : `S${season.toString().padStart(2, "0")}`;
+                } else if (episode != null) {
+                    episodeFormat = format === "fulltext" ? `Episode ${episode}` : `E${episode.toString().padStart(2, "0")}`;
+                }
+
+                if (settings.store.showEpisodeName && mediaData.name && !settings.store.privacyMode) {
+                    return `${episodeFormat} - ${mediaData.name}`;
+                }
+                return episodeFormat;
+            }
+            if (settings.store.privacyMode) {
+                return mediaData.type === "Audio" ? "Listening to music" : (mediaData.year ? "(????)" : undefined);
             }
             return mediaData.artist || (mediaData.year ? `(${mediaData.year})` : undefined);
         };
 
-        const timestamps = mediaData.position && mediaData.duration ? {
+        const timestamps = (!mediaData.isPaused && mediaData.position != null && mediaData.duration != null) ? {
             start: Date.now() - (mediaData.position * 1000),
             end: Date.now() + ((mediaData.duration - mediaData.position) * 1000)
         } : undefined;
