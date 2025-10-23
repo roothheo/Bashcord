@@ -61,7 +61,13 @@ export function WelcomeModal({ modalProps }: { modalProps: ModalProps; }) {
 
 // Fonction pour ouvrir la modale de bienvenue
 export function openWelcomeModal() {
-    const modalKey = openModal(modalProps => (
-        <WelcomeModal modalProps={modalProps} />
-    ));
+    console.log("🎉 Bashcord: openWelcomeModal called");
+    try {
+        const modalKey = openModal(modalProps => (
+            <WelcomeModal modalProps={modalProps} />
+        ));
+        console.log("🎉 Bashcord: Modal opened with key:", modalKey);
+    } catch (error) {
+        console.error("🎉 Bashcord: Error opening welcome modal:", error);
+    }
 }

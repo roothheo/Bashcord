@@ -39,6 +39,19 @@ import { createAndAppendStyle } from "@utils/css";
 import { StartAt } from "@utils/types";
 import { openWelcomeModal } from "./components/WelcomeModal";
 
+// Fonction de test pour forcer l'affichage du popup (accessible depuis la console)
+(window as any).testBashcordWelcome = () => {
+    console.log("🎉 Bashcord: Force opening welcome modal...");
+    openWelcomeModal();
+};
+
+// Fonction pour réinitialiser le popup (accessible depuis la console)
+(window as any).resetBashcordWelcome = () => {
+    console.log("🎉 Bashcord: Resetting welcome popup...");
+    localStorage.removeItem("bashcord-welcome-shown");
+    console.log("🎉 Bashcord: Welcome popup reset. Reload Discord to see it again.");
+};
+
 import { get as dsGet } from "./api/DataStore";
 import { NotificationData, showNotification } from "./api/Notifications";
 import { PlainSettings, Settings } from "./api/Settings";
@@ -165,9 +178,14 @@ async function init() {
     // Popup de bienvenue Bashcord
     setTimeout(() => {
         const hasShownWelcome = localStorage.getItem("bashcord-welcome-shown");
+        console.log("🎉 Bashcord: Checking welcome popup...", { hasShownWelcome });
+        
         if (!hasShownWelcome) {
+            console.log("🎉 Bashcord: Opening welcome modal...");
             openWelcomeModal();
             localStorage.setItem("bashcord-welcome-shown", "true");
+        } else {
+            console.log("🎉 Bashcord: Welcome popup already shown, skipping...");
         }
     }, 3000);
 
