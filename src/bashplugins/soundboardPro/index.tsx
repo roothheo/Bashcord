@@ -5,7 +5,7 @@ import { Button, Flex, React, useState } from "@webpack/common";
 import { openModal, closeModal, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalProps, ModalRoot, ModalSize } from "@utils/modal";
 import { BaseText } from "@components/BaseText";
 import { showNotification } from "@api/Notifications";
-import { addButton, removeButton } from "@api/MessagePopover";
+import { findComponentByCodeLazy } from "@webpack";
 
 // Types pour les sons
 interface Sound {
@@ -80,19 +80,19 @@ function playSyntheticSound(sound: Sound) {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
-        
+
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
+
         oscillator.frequency.setValueAtTime(sound.frequency, audioContext.currentTime);
         oscillator.type = sound.type;
-        
+
         gainNode.gain.setValueAtTime(settings.store.volume / 100, audioContext.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sound.duration);
-        
+
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + sound.duration);
-        
+
         return true;
     } catch (error) {
         console.error("[SoundboardPro] Erreur synthétique:", error);
@@ -104,29 +104,29 @@ function playSyntheticSound(sound: Sound) {
 async function playUrlSound(sound: Sound) {
     try {
         if (!sound.url) return false;
-        
+
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const response = await fetch(sound.url, { 
+        const response = await fetch(sound.url, {
             mode: 'cors',
             credentials: 'omit'
         });
-        
+
         if (!response.ok) return false;
-        
+
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        
+
         const source = audioContext.createBufferSource();
         const gainNode = audioContext.createGain();
-        
+
         source.buffer = audioBuffer;
         source.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
+
         gainNode.gain.setValueAtTime(settings.store.volume / 100, audioContext.currentTime);
-        
+
         source.start();
-        
+
         return true;
     } catch (error) {
         console.error("[SoundboardPro] Erreur URL:", error);
@@ -137,18 +137,18 @@ async function playUrlSound(sound: Sound) {
 // Fonction principale pour jouer un son
 async function playSound(sound: Sound) {
     let success = false;
-    
+
     switch (settings.store.soundMode) {
         case "synthetic":
             success = playSyntheticSound(sound);
             break;
-            
+
         case "url":
             if (sound.url) {
                 success = await playUrlSound(sound);
             }
             break;
-            
+
         case "hybrid":
             if (sound.url) {
                 success = await playUrlSound(sound);
@@ -158,7 +158,7 @@ async function playSound(sound: Sound) {
             }
             break;
     }
-    
+
     if (success) {
         showNotification({
             title: "🔊 Soundboard Pro",
@@ -190,7 +190,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
     // Fonction pour ajouter un son personnalisé
     const addCustomSound = () => {
         if (!customSoundUrl.trim() || !customSoundName.trim()) return;
-        
+
         const newSound: Sound = {
             id: `custom_${Date.now()}`,
             name: customSoundName,
@@ -200,11 +200,11 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
             duration: 1.0,
             type: 'sine'
         };
-        
+
         setSounds([...sounds, newSound]);
         setCustomSoundUrl("");
         setCustomSoundName("");
-        
+
         showNotification({
             title: "🔊 Soundboard Pro",
             body: "Son personnalisé ajouté !",
@@ -220,21 +220,21 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                 </BaseText>
                 <ModalCloseButton onClick={modalProps.onClose} />
             </ModalHeader>
-            
+
             <ModalContent>
                 <BaseText size="md" style={{ marginBottom: "16px", color: "var(--text-muted)" }}>
                     Soundboard avancé avec sons synthétiques et support d'URLs. Contourne les restrictions Discord.
                 </BaseText>
-                
+
                 {/* Sons prédéfinis */}
                 <div style={{ marginBottom: "24px" }}>
                     <BaseText size="md" weight="semibold" style={{ marginBottom: "12px" }}>
                         🎵 Sons Disponibles ({sounds.length})
                     </BaseText>
-                    <div style={{ 
-                        display: "grid", 
-                        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", 
-                        gap: "8px" 
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                        gap: "8px"
                     }}>
                         {sounds.map(sound => (
                             <Button
@@ -243,7 +243,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                                 disabled={isPlaying === sound.id}
                                 color={Button.Colors.PRIMARY}
                                 look={Button.Looks.OUTLINED}
-                                style={{ 
+                                style={{
                                     height: "70px",
                                     display: "flex",
                                     flexDirection: "column",
@@ -260,12 +260,12 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                         ))}
                     </div>
                 </div>
-                
+
                 {/* Ajout de son personnalisé */}
                 {settings.store.enableCustomSounds && (
-                    <div style={{ 
-                        borderTop: "1px solid var(--background-modifier-accent)", 
-                        paddingTop: "16px" 
+                    <div style={{
+                        borderTop: "1px solid var(--background-modifier-accent)",
+                        paddingTop: "16px"
                     }}>
                         <BaseText size="md" weight="semibold" style={{ marginBottom: "12px" }}>
                             ➕ Ajouter un Son Personnalisé
@@ -311,7 +311,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                     </div>
                 )}
             </ModalContent>
-            
+
             <ModalFooter>
                 <Flex direction={Flex.Direction.HORIZONTAL_REVERSE}>
                     <Button
@@ -340,6 +340,52 @@ export function openSoundboardPro() {
     }
 }
 
+// Composant bouton pour le panel vocal (comme fakeDeafen)
+const PanelButton = findComponentByCodeLazy(".NONE,disabled:", ".PANEL_BUTTON");
+
+function SoundboardIcon() {
+    return (
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            {/* Speaker cone */}
+            <path
+                d="M8 12 L8 20 L12 20 L18 26 L18 6 L12 12 L8 12 Z"
+                fill="currentColor"
+            />
+            {/* Sound waves */}
+            <path
+                d="M20 8 C22 10 22 14 20 16"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="none"
+            />
+            <path
+                d="M22 6 C25 9 25 15 22 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="none"
+            />
+            <path
+                d="M24 4 C28 8 28 16 24 20"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="none"
+            />
+        </svg>
+    );
+}
+
+function SoundboardButton() {
+    return (
+        <PanelButton
+            tooltipText="Soundboard Pro"
+            icon={SoundboardIcon}
+            onClick={() => {
+                openSoundboardPro();
+            }}
+        />
+    );
+}
+
 // Composant des paramètres
 function SettingsComponent() {
     return (
@@ -350,7 +396,7 @@ function SettingsComponent() {
             <BaseText size="sm" style={{ marginBottom: "16px", color: "var(--text-muted)" }}>
                 Soundboard avancé combinant sons synthétiques et support d'URLs. Contourne les restrictions Discord avec des techniques avancées.
             </BaseText>
-            
+
             <div style={{ marginBottom: "16px" }}>
                 <Button
                     onClick={openSoundboardPro}
@@ -360,14 +406,14 @@ function SettingsComponent() {
                     🎵 Ouvrir le Soundboard Pro
                 </Button>
             </div>
-            
+
             <BaseText size="sm" style={{ color: "var(--text-muted)" }}>
-                <strong>✨ Fonctionnalités :</strong><br/>
-                • 12 sons synthétiques optimisés<br/>
-                • Support d'URLs personnalisées<br/>
-                • 3 modes de lecture (synthétique, URL, hybride)<br/>
-                • Bouton flottant configurable<br/>
-                • Contournement des permissions Discord<br/>
+                <strong>✨ Fonctionnalités :</strong><br />
+                • 12 sons synthétiques optimisés<br />
+                • Support d'URLs personnalisées<br />
+                • 3 modes de lecture (synthétique, URL, hybride)<br />
+                • Bouton flottant configurable<br />
+                • Contournement des permissions Discord<br />
                 • Interface avancée avec grille responsive
             </BaseText>
         </div>
@@ -397,7 +443,7 @@ function createFloatingButton() {
         justify-content: center;
         transition: all 0.2s ease;
     `;
-    
+
     button.addEventListener('click', openSoundboardPro);
     button.addEventListener('mouseenter', () => {
         button.style.transform = 'scale(1.1)';
@@ -407,85 +453,10 @@ function createFloatingButton() {
         button.style.transform = 'scale(1)';
         button.style.background = 'var(--brand-500)';
     });
-    
+
     return button;
 }
 
-// Fonction pour ajouter le bouton soundboard au panel vocal
-function addSoundboardButtonToVoicePanel() {
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === 'childList') {
-                // Chercher le panel vocal
-                const voicePanel = document.querySelector('[class*="panels"] [class*="voice"]') || 
-                                 document.querySelector('[class*="panels"] [class*="connected"]') ||
-                                 document.querySelector('[class*="panels"] [class*="voiceConnected"]');
-                
-                if (voicePanel) {
-                    // Chercher la section des boutons d'action
-                    const actionButtons = voicePanel.querySelector('[class*="actions"]') ||
-                                        voicePanel.querySelector('[class*="buttons"]') ||
-                                        voicePanel.querySelector('[class*="controls"]');
-                    
-                    if (actionButtons && !actionButtons.querySelector('#bashcord-soundboard-button')) {
-                        // Créer le bouton soundboard
-                        const soundboardButton = document.createElement('button');
-                        soundboardButton.id = 'bashcord-soundboard-button';
-                        soundboardButton.innerHTML = '🔊';
-                        soundboardButton.title = 'Soundboard Pro';
-                        soundboardButton.style.cssText = `
-                            width: 40px;
-                            height: 40px;
-                            border-radius: 8px;
-                            border: none;
-                            background: var(--background-secondary);
-                            color: var(--text-normal);
-                            font-size: 18px;
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            transition: all 0.2s ease;
-                            margin: 0 4px;
-                        `;
-                        
-                        soundboardButton.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openSoundboardPro();
-                        });
-                        
-                        soundboardButton.addEventListener('mouseenter', () => {
-                            soundboardButton.style.background = 'var(--background-modifier-hover)';
-                            soundboardButton.style.transform = 'scale(1.05)';
-                        });
-                        
-                        soundboardButton.addEventListener('mouseleave', () => {
-                            soundboardButton.style.background = 'var(--background-secondary)';
-                            soundboardButton.style.transform = 'scale(1)';
-                        });
-                        
-                        // Ajouter le bouton à côté des autres boutons d'action
-                        actionButtons.appendChild(soundboardButton);
-                        
-                        console.log("[SoundboardPro] Bouton ajouté au panel vocal");
-                    }
-                }
-            }
-        });
-    });
-    
-    // Observer les changements dans le DOM
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-    
-    // Nettoyer l'observer après 30 secondes pour éviter les fuites mémoire
-    setTimeout(() => {
-        observer.disconnect();
-    }, 30000);
-}
 
 export default definePlugin({
     name: "SoundboardPro",
@@ -493,22 +464,20 @@ export default definePlugin({
     authors: [Devs.Bashcord],
     settings,
     settingsAboutComponent: SettingsComponent,
-    
+
     patches: [
         {
-            find: ".Messages.VOICE_CONNECTED",
+            find: "#{intl::ACCOUNT_SPEAKING_WHILE_MUTED}",
             replacement: {
-                match: /(\w+\.Messages\.VOICE_CONNECTED)/,
-                replace: "$1,openSoundboardPro"
+                match: /className:\i\.buttons,.{0,50}children:\[/,
+                replace: "$&$self.SoundboardButton(),"
             }
         }
     ],
-    
+    SoundboardButton,
+
     start() {
-        console.log("[SoundboardPro] Plugin démarré - Version fusionnée");
-        
-        // Ajouter le bouton dans le panel vocal
-        addSoundboardButtonToVoicePanel();
+        console.log("[SoundboardPro] Plugin démarré - Version fusionnée avec patch");
         
         // Ajouter le bouton flottant si activé
         if (settings.store.showFloatingButton) {
@@ -516,19 +485,19 @@ export default definePlugin({
             button.id = 'bashcord-soundboard-pro-button';
             document.body.appendChild(button);
         }
-        
+
         // Fonction de test accessible depuis la console
         (window as any).testSoundboardPro = () => {
             console.log("🔊 SoundboardPro: Test du plugin...");
             openSoundboardPro();
         };
-        
+
         // Fonction pour jouer un son de test
         (window as any).playTestSound = () => {
             console.log("🔊 SoundboardPro: Lecture d'un son de test...");
             playSound(DEFAULT_SOUNDS[0]); // Bruh
         };
-        
+
         // Fonction pour tester tous les sons
         (window as any).testAllSounds = async () => {
             console.log("🔊 SoundboardPro: Test de tous les sons...");
@@ -538,23 +507,17 @@ export default definePlugin({
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         };
-        
-        // Fonction pour forcer l'ajout du bouton au panel vocal
-        (window as any).addSoundboardToVoicePanel = () => {
-            console.log("🔊 SoundboardPro: Ajout forcé du bouton au panel vocal...");
-            addSoundboardButtonToVoicePanel();
-        };
-        
+
+
         console.log("🔊 SoundboardPro: Fonctions de test disponibles:");
         console.log("  - testSoundboardPro() : Ouvre l'interface du soundboard");
         console.log("  - playTestSound() : Joue le son 'Bruh'");
         console.log("  - testAllSounds() : Joue tous les sons en séquence");
-        console.log("  - addSoundboardToVoicePanel() : Force l'ajout du bouton au panel vocal");
     },
-    
+
     stop() {
         console.log("[SoundboardPro] Plugin arrêté");
-        
+
         // Supprimer le bouton flottant
         const buttonElement = document.getElementById('bashcord-soundboard-pro-button');
         if (buttonElement) {
