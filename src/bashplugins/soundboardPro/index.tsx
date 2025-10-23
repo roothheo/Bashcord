@@ -1,7 +1,6 @@
 import { definePluginSettings } from "@api/Settings";
 import { Devs } from "@utils/constants";
 import definePlugin, { OptionType } from "@utils/types";
-import { Logger } from "@utils/Logger";
 import { Button, Flex, React, useState } from "@webpack/common";
 import { openModal, closeModal, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalProps, ModalRoot, ModalSize } from "@utils/modal";
 import { BaseText } from "@components/BaseText";
@@ -419,7 +418,7 @@ export default definePlugin({
     settingsAboutComponent: SettingsComponent,
     
     start() {
-        Logger.log("[SoundboardPro] Plugin démarré - Version fusionnée");
+        console.log("[SoundboardPro] Plugin démarré - Version fusionnée");
         
         // Ajouter le bouton flottant si activé
         if (settings.store.showFloatingButton) {
@@ -457,7 +456,7 @@ export default definePlugin({
     },
     
     stop() {
-        Logger.log("[SoundboardPro] Plugin arrêté");
+        console.log("[SoundboardPro] Plugin arrêté");
         
         // Supprimer le bouton flottant
         const buttonElement = document.getElementById('bashcord-soundboard-pro-button');
