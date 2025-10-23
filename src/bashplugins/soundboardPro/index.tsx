@@ -5,6 +5,7 @@ import { Button, Flex, React, useState } from "@webpack/common";
 import { openModal, closeModal, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalProps, ModalRoot, ModalSize } from "@utils/modal";
 import { BaseText } from "@components/BaseText";
 import { showNotification } from "@api/Notifications";
+import { addButton, removeButton } from "@api/MessagePopover";
 
 // Types pour les sons
 interface Sound {
@@ -410,6 +411,82 @@ function createFloatingButton() {
     return button;
 }
 
+// Fonction pour ajouter le bouton soundboard au panel vocal
+function addSoundboardButtonToVoicePanel() {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                // Chercher le panel vocal
+                const voicePanel = document.querySelector('[class*="panels"] [class*="voice"]') || 
+                                 document.querySelector('[class*="panels"] [class*="connected"]') ||
+                                 document.querySelector('[class*="panels"] [class*="voiceConnected"]');
+                
+                if (voicePanel) {
+                    // Chercher la section des boutons d'action
+                    const actionButtons = voicePanel.querySelector('[class*="actions"]') ||
+                                        voicePanel.querySelector('[class*="buttons"]') ||
+                                        voicePanel.querySelector('[class*="controls"]');
+                    
+                    if (actionButtons && !actionButtons.querySelector('#bashcord-soundboard-button')) {
+                        // Créer le bouton soundboard
+                        const soundboardButton = document.createElement('button');
+                        soundboardButton.id = 'bashcord-soundboard-button';
+                        soundboardButton.innerHTML = '🔊';
+                        soundboardButton.title = 'Soundboard Pro';
+                        soundboardButton.style.cssText = `
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 8px;
+                            border: none;
+                            background: var(--background-secondary);
+                            color: var(--text-normal);
+                            font-size: 18px;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: all 0.2s ease;
+                            margin: 0 4px;
+                        `;
+                        
+                        soundboardButton.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openSoundboardPro();
+                        });
+                        
+                        soundboardButton.addEventListener('mouseenter', () => {
+                            soundboardButton.style.background = 'var(--background-modifier-hover)';
+                            soundboardButton.style.transform = 'scale(1.05)';
+                        });
+                        
+                        soundboardButton.addEventListener('mouseleave', () => {
+                            soundboardButton.style.background = 'var(--background-secondary)';
+                            soundboardButton.style.transform = 'scale(1)';
+                        });
+                        
+                        // Ajouter le bouton à côté des autres boutons d'action
+                        actionButtons.appendChild(soundboardButton);
+                        
+                        console.log("[SoundboardPro] Bouton ajouté au panel vocal");
+                    }
+                }
+            }
+        });
+    });
+    
+    // Observer les changements dans le DOM
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
+    // Nettoyer l'observer après 30 secondes pour éviter les fuites mémoire
+    setTimeout(() => {
+        observer.disconnect();
+    }, 30000);
+}
+
 export default definePlugin({
     name: "SoundboardPro",
     description: "Soundboard avancé combinant sons synthétiques et support d'URLs. Contourne les restrictions Discord.",
@@ -417,8 +494,21 @@ export default definePlugin({
     settings,
     settingsAboutComponent: SettingsComponent,
     
+    patches: [
+        {
+            find: ".Messages.VOICE_CONNECTED",
+            replacement: {
+                match: /(\w+\.Messages\.VOICE_CONNECTED)/,
+                replace: "$1,openSoundboardPro"
+            }
+        }
+    ],
+    
     start() {
         console.log("[SoundboardPro] Plugin démarré - Version fusionnée");
+        
+        // Ajouter le bouton dans le panel vocal
+        addSoundboardButtonToVoicePanel();
         
         // Ajouter le bouton flottant si activé
         if (settings.store.showFloatingButton) {
@@ -449,10 +539,17 @@ export default definePlugin({
             }
         };
         
+        // Fonction pour forcer l'ajout du bouton au panel vocal
+        (window as any).addSoundboardToVoicePanel = () => {
+            console.log("🔊 SoundboardPro: Ajout forcé du bouton au panel vocal...");
+            addSoundboardButtonToVoicePanel();
+        };
+        
         console.log("🔊 SoundboardPro: Fonctions de test disponibles:");
         console.log("  - testSoundboardPro() : Ouvre l'interface du soundboard");
         console.log("  - playTestSound() : Joue le son 'Bruh'");
         console.log("  - testAllSounds() : Joue tous les sons en séquence");
+        console.log("  - addSoundboardToVoicePanel() : Force l'ajout du bouton au panel vocal");
     },
     
     stop() {
