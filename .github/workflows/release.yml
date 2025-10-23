@@ -64,12 +64,14 @@ jobs:
                       cp desktop/* release 2>/dev/null || true
                   fi
 
-                  # Copy bashcord files if they exist
-                  if [ -d "bashcord" ]; then
-                      for file in bashcord/*; do
+                  # Copy equibop files and rename them to bashcord
+                  if [ -d "equibop" ]; then
+                      for file in equibop/*; do
                           if [ -f "$file" ]; then
                               filename=$(basename "$file")
-                              cp "$file" "release/bashcord${filename^}"
+                              # Remove equibop prefix and add bashcord prefix
+                              newname=$(echo "$filename" | sed 's/^equibop//')
+                              cp "$file" "release/bashcord$newname"
                           fi
                       done
                   fi
