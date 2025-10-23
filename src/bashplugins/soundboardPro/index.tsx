@@ -470,32 +470,16 @@ const PanelButton = findComponentByCodeLazy(".NONE,disabled:", ".PANEL_BUTTON");
 
 function SoundboardIcon() {
     return (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            {/* Speaker cone */}
-            <path
-                d="M8 12 L8 20 L12 20 L18 26 L18 6 L12 12 L8 12 Z"
-                fill="currentColor"
-            />
-            {/* Sound waves */}
-            <path
-                d="M20 8 C22 10 22 14 20 16"
-                stroke="currentColor"
-                strokeWidth="2"
-                fill="none"
-            />
-            <path
-                d="M22 6 C25 9 25 15 22 18"
-                stroke="currentColor"
-                strokeWidth="2"
-                fill="none"
-            />
-            <path
-                d="M24 4 C28 8 28 16 24 20"
-                stroke="currentColor"
-                strokeWidth="2"
-                fill="none"
-            />
-        </svg>
+        <img 
+            src="./src/bashplugins/soundboardPro/icone.webp" 
+            alt="Soundboard Pro" 
+            width="28" 
+            height="28"
+            style={{ 
+                borderRadius: "4px",
+                objectFit: "cover"
+            }}
+        />
     );
 }
 
@@ -548,7 +532,19 @@ function SettingsComponent() {
 // Fonction pour créer le bouton flottant
 function createFloatingButton() {
     const button = document.createElement('button');
-    button.innerHTML = '🔊';
+    
+    // Créer l'image pour l'icône
+    const iconImg = document.createElement('img');
+    iconImg.src = './src/bashplugins/soundboardPro/icone.webp';
+    iconImg.alt = 'Soundboard Pro';
+    iconImg.style.cssText = `
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        object-fit: cover;
+    `;
+    
+    button.appendChild(iconImg);
     button.style.cssText = `
         position: fixed;
         bottom: 20px;
@@ -559,8 +555,6 @@ function createFloatingButton() {
         border-radius: 50%;
         border: none;
         background: var(--brand-500);
-        color: white;
-        font-size: 24px;
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         display: flex;
@@ -568,7 +562,7 @@ function createFloatingButton() {
         justify-content: center;
         transition: all 0.2s ease;
     `;
-
+    
     button.addEventListener('click', openSoundboardPro);
     button.addEventListener('mouseenter', () => {
         button.style.transform = 'scale(1.1)';
@@ -578,7 +572,7 @@ function createFloatingButton() {
         button.style.transform = 'scale(1)';
         button.style.background = 'var(--brand-500)';
     });
-
+    
     return button;
 }
 
