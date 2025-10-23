@@ -18,9 +18,9 @@ Ce repository est configuré pour se synchroniser **automatiquement** avec Equic
 
 Ces fichiers **ne seront JAMAIS écrasés** lors des synchronisations :
 
-- 🔒 `src/userplugins/**` - Vos plugins personnalisés
-- 🔒 `src/equicordplugins/followVoiceUser/**` - Votre version modifiée
-- 🔒 `src/components/settings/tabs/plugins/index.tsx` - Label "Show Bashcord"
+- 🔒 `src/bashplugins/**` - Vos plugins personnalisés
+- 🔒 `src/components/WelcomeModal.tsx` - Popup de bienvenue Bashcord
+- 🔒 `src/plugins/_core/settings.tsx` - Interface Bashcord
 
 ## 🎮 Utilisation
 
@@ -61,9 +61,9 @@ git fetch upstream
 git merge upstream/main
 
 # En cas de conflit sur vos fichiers
-git checkout --ours src/userplugins/
-git checkout --ours src/equicordplugins/followVoiceUser/
-git checkout --ours src/components/settings/tabs/plugins/index.tsx
+git checkout --ours src/bashplugins/
+git checkout --ours src/components/WelcomeModal.tsx
+git checkout --ours src/plugins/_core/settings.tsx
 
 # Finaliser
 git add .
