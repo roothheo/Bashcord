@@ -239,7 +239,7 @@ function playLocalAudioFileInDiscord(fileUrl: string, volume: number = 0.5) {
         try {
             // Essayer d'abord avec l'API Discord
             try {
-                playAudio(fileUrl, { 
+                playAudio(fileUrl, {
                     volume: volume,
                     persistent: false
                 });
@@ -247,12 +247,12 @@ function playLocalAudioFileInDiscord(fileUrl: string, volume: number = 0.5) {
                 resolve(true);
             } catch (discordError) {
                 console.log("[SoundboardPro] API Discord échouée, tentative avec Audio natif:", discordError);
-                
+
                 // Fallback vers l'API Audio native
                 const audio = new Audio(fileUrl);
                 audio.volume = volume / 100; // Convertir de 0-100 à 0-1
                 audio.preload = 'auto';
-                
+
                 audio.oncanplaythrough = () => {
                     console.log("[SoundboardPro] Fichier audio prêt à être joué (natif)");
                     audio.play().then(() => {
@@ -263,12 +263,12 @@ function playLocalAudioFileInDiscord(fileUrl: string, volume: number = 0.5) {
                         resolve(false);
                     });
                 };
-                
+
                 audio.onerror = (error) => {
                     console.error("[SoundboardPro] Erreur de chargement du fichier audio (natif):", error);
                     resolve(false);
                 };
-                
+
                 // Charger le fichier
                 audio.load();
             }
@@ -296,7 +296,7 @@ async function playSound(sound: Sound) {
             if (settings.store.forceDiscordAPI && sound.url) {
                 // Forcer l'API Discord pour tous les sons
                 try {
-                    playAudio(sound.url, { 
+                    playAudio(sound.url, {
                         volume: settings.store.volume,
                         persistent: false
                     });
@@ -312,11 +312,11 @@ async function playSound(sound: Sound) {
                     case "synthetic":
                         success = playSyntheticSound(sound);
                         break;
-                        
+
                     case "url":
                         if (sound.url) {
                             try {
-                                playAudio(sound.url, { 
+                                playAudio(sound.url, {
                                     volume: settings.store.volume,
                                     persistent: false
                                 });
@@ -327,11 +327,11 @@ async function playSound(sound: Sound) {
                             }
                         }
                         break;
-                        
+
                     case "hybrid":
                         if (sound.url) {
                             try {
-                                playAudio(sound.url, { 
+                                playAudio(sound.url, {
                                     volume: settings.store.volume,
                                     persistent: false
                                 });
