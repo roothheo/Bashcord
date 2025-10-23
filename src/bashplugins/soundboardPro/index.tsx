@@ -156,6 +156,11 @@ const settings = definePluginSettings({
         description: "Contourner les restrictions Discord",
         default: true,
     },
+    forceDiscordAPI: {
+        type: OptionType.BOOLEAN,
+        description: "Forcer l'API Discord pour tous les sons (recommandé pour le canal vocal)",
+        default: true,
+    },
     soundMode: {
         type: OptionType.SELECT,
         description: "Mode de lecture des sons",
@@ -228,32 +233,45 @@ async function playUrlSound(sound: Sound) {
     }
 }
 
-// Fonction pour jouer un fichier audio local
-function playLocalAudioFile(fileUrl: string, volume: number = 0.5) {
+// Fonction pour jouer un fichier audio local dans Discord
+function playLocalAudioFileInDiscord(fileUrl: string, volume: number = 0.5) {
     return new Promise<boolean>((resolve) => {
         try {
-            const audio = new Audio(fileUrl);
-            audio.volume = volume / 100; // Convertir de 0-100 à 0-1
-            audio.preload = 'auto';
-            
-            audio.oncanplaythrough = () => {
-                console.log("[SoundboardPro] Fichier audio prêt à être joué");
-                audio.play().then(() => {
-                    console.log("[SoundboardPro] Fichier audio joué avec succès");
-                    resolve(true);
-                }).catch((error) => {
-                    console.error("[SoundboardPro] Erreur lors de la lecture du fichier:", error);
-                    resolve(false);
+            // Essayer d'abord avec l'API Discord
+            try {
+                playAudio(fileUrl, { 
+                    volume: volume,
+                    persistent: false
                 });
-            };
-            
-            audio.onerror = (error) => {
-                console.error("[SoundboardPro] Erreur de chargement du fichier audio:", error);
-                resolve(false);
-            };
-            
-            // Charger le fichier
-            audio.load();
+                console.log("[SoundboardPro] Fichier audio joué via API Discord");
+                resolve(true);
+            } catch (discordError) {
+                console.log("[SoundboardPro] API Discord échouée, tentative avec Audio natif:", discordError);
+                
+                // Fallback vers l'API Audio native
+                const audio = new Audio(fileUrl);
+                audio.volume = volume / 100; // Convertir de 0-100 à 0-1
+                audio.preload = 'auto';
+                
+                audio.oncanplaythrough = () => {
+                    console.log("[SoundboardPro] Fichier audio prêt à être joué (natif)");
+                    audio.play().then(() => {
+                        console.log("[SoundboardPro] Fichier audio joué avec succès (natif)");
+                        resolve(true);
+                    }).catch((error) => {
+                        console.error("[SoundboardPro] Erreur lors de la lecture du fichier (natif):", error);
+                        resolve(false);
+                    });
+                };
+                
+                audio.onerror = (error) => {
+                    console.error("[SoundboardPro] Erreur de chargement du fichier audio (natif):", error);
+                    resolve(false);
+                };
+                
+                // Charger le fichier
+                audio.load();
+            }
         } catch (error) {
             console.error("[SoundboardPro] Erreur lors de la création de l'audio:", error);
             resolve(false);
@@ -264,60 +282,77 @@ function playLocalAudioFile(fileUrl: string, volume: number = 0.5) {
 // Fonction principale pour jouer un son
 async function playSound(sound: Sound) {
     let success = false;
-    
+
     try {
         // Vérifier si c'est un fichier local (blob URL)
         const isLocalFile = sound.url?.startsWith('blob:') || false;
-        
-        if (isLocalFile && sound.url) {
-            // Pour les fichiers locaux, utiliser l'API Audio native
+
+        if (isLocalFile && sound.url && !settings.store.forceDiscordAPI) {
+            // Pour les fichiers locaux, essayer d'abord l'API Discord, puis fallback natif
             console.log("[SoundboardPro] Lecture d'un fichier local:", sound.name);
-            success = await playLocalAudioFile(sound.url, settings.store.volume);
+            success = await playLocalAudioFileInDiscord(sound.url, settings.store.volume);
         } else {
-            // Pour les URLs externes, utiliser l'API Discord
-            switch (settings.store.soundMode) {
-                case "synthetic":
-                    success = playSyntheticSound(sound);
-                    break;
-                    
-                case "url":
-                    if (sound.url) {
-                        try {
-                            playAudio(sound.url, { 
-                                volume: settings.store.volume,
-                                persistent: false
-                            });
-                            success = true;
-                        } catch (error) {
-                            console.error("[SoundboardPro] Erreur API Discord:", error);
-                            success = false;
+            // Pour les URLs externes ou si forceDiscordAPI est activé
+            if (settings.store.forceDiscordAPI && sound.url) {
+                // Forcer l'API Discord pour tous les sons
+                try {
+                    playAudio(sound.url, { 
+                        volume: settings.store.volume,
+                        persistent: false
+                    });
+                    success = true;
+                    console.log("[SoundboardPro] Son joué via API Discord (forcé):", sound.name);
+                } catch (error) {
+                    console.error("[SoundboardPro] Erreur API Discord (forcé):", error);
+                    success = false;
+                }
+            } else {
+                // Logique normale selon le mode
+                switch (settings.store.soundMode) {
+                    case "synthetic":
+                        success = playSyntheticSound(sound);
+                        break;
+                        
+                    case "url":
+                        if (sound.url) {
+                            try {
+                                playAudio(sound.url, { 
+                                    volume: settings.store.volume,
+                                    persistent: false
+                                });
+                                success = true;
+                            } catch (error) {
+                                console.error("[SoundboardPro] Erreur API Discord:", error);
+                                success = false;
+                            }
                         }
-                    }
-                    break;
-                    
-                case "hybrid":
-                    if (sound.url) {
-                        try {
-                            playAudio(sound.url, { 
-                                volume: settings.store.volume,
-                                persistent: false
-                            });
-                            success = true;
-                        } catch (error) {
-                            console.error("[SoundboardPro] Erreur API Discord, fallback synthétique:", error);
+                        break;
+                        
+                    case "hybrid":
+                        if (sound.url) {
+                            try {
+                                playAudio(sound.url, { 
+                                    volume: settings.store.volume,
+                                    persistent: false
+                                });
+                                success = true;
+                            } catch (error) {
+                                console.error("[SoundboardPro] Erreur API Discord, fallback synthétique:", error);
+                                success = playSyntheticSound(sound);
+                            }
+                        } else {
                             success = playSyntheticSound(sound);
                         }
-                    } else {
-                        success = playSyntheticSound(sound);
-                    }
-                    break;
+                        break;
+                }
             }
         }
-        
+
         if (success) {
+            const isForcedDiscord = settings.store.forceDiscordAPI && sound.url;
             showNotification({
                 title: "🔊 Soundboard Pro",
-                body: `Son "${sound.name}" joué${isLocalFile ? ' (fichier local)' : ' dans le canal vocal'}`,
+                body: `Son "${sound.name}" joué${isForcedDiscord ? ' dans le canal vocal' : isLocalFile ? ' (fichier local)' : ' dans le canal vocal'}`,
                 color: "var(--green-360)",
             });
         } else {
@@ -411,7 +446,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
 
         // Extraire le nom du fichier sans extension
         const fileName = file.name.replace(/\.[^/.]+$/, "");
-        
+
         // Convertir le fichier en ArrayBuffer pour le stocker
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -428,9 +463,9 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                     fileData: arrayBuffer, // Stocker les données du fichier
                     fileType: file.type
                 };
-                
+
                 setSounds([...sounds, newSound]);
-                
+
                 showNotification({
                     title: "🔊 Soundboard Pro",
                     body: `Fichier "${fileName}" ajouté au soundboard !`,
@@ -666,6 +701,7 @@ function SettingsComponent() {
                 • Bouton intégré dans le panel vocal<br />
                 • Sons joués directement dans Discord<br />
                 • Sélection de fichiers MP3 locaux<br />
+                • Option "Forcer API Discord" pour le canal vocal<br />
                 • Interface avancée avec grille responsive
             </BaseText>
         </div>
