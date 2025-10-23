@@ -188,31 +188,41 @@ function SettingsComponent() {
     );
 }
 
-// Bouton flottant pour l'interface
-function SoundboardButton() {
-    return (
-        <Button
-            onClick={openSimpleSoundboard}
-            color={Button.Colors.BRAND}
-            size={Button.Sizes.SMALL}
-            style={{
-                position: "fixed",
-                bottom: "20px",
-                right: "20px",
-                zIndex: 9999,
-                borderRadius: "50%",
-                width: "60px",
-                height: "60px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "24px",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)"
-            }}
-        >
-            🔊
-        </Button>
-    );
+// Fonction pour créer le bouton flottant
+function createFloatingButton() {
+    const button = document.createElement('button');
+    button.innerHTML = '🔊';
+    button.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: none;
+        background: var(--brand-500);
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    `;
+    
+    button.addEventListener('click', openSimpleSoundboard);
+    button.addEventListener('mouseenter', () => {
+        button.style.transform = 'scale(1.1)';
+        button.style.background = 'var(--brand-400)';
+    });
+    button.addEventListener('mouseleave', () => {
+        button.style.transform = 'scale(1)';
+        button.style.background = 'var(--brand-500)';
+    });
+    
+    return button;
 }
 
 export default definePlugin({
@@ -227,15 +237,9 @@ export default definePlugin({
         
         // Ajouter le bouton flottant si activé
         if (settings.store.showButton) {
-            // Ajouter le bouton dans l'interface
-            const buttonElement = document.createElement('div');
-            buttonElement.id = 'bashcord-soundboard-button';
-            document.body.appendChild(buttonElement);
-            
-            // Rendre le composant React
-            const { createRoot } = require('react-dom/client');
-            const root = createRoot(buttonElement);
-            root.render(React.createElement(SoundboardButton));
+            const button = createFloatingButton();
+            button.id = 'bashcord-soundboard-button';
+            document.body.appendChild(button);
         }
         
         // Fonction de test accessible depuis la console
