@@ -63,7 +63,8 @@ jobs:
         
         PROTECTED_FILES=(
           "src/plugins/_core/settings.tsx"
-          "src/userplugins"
+          "src/bashplugins"
+          "src/components/WelcomeModal.tsx"
         )
         
         for file in "${PROTECTED_FILES[@]}"; do
@@ -105,7 +106,8 @@ jobs:
         
         PROTECTED_FILES=(
           "src/plugins/_core/settings.tsx"
-          "src/userplugins"
+          "src/bashplugins"
+          "src/components/WelcomeModal.tsx"
         )
         
         for file in "${PROTECTED_FILES[@]}"; do
@@ -128,11 +130,18 @@ jobs:
           exit 1
         fi
         
-        if [ -d "src/userplugins" ] && [ "$(ls -A src/userplugins)" ]; then
-          plugin_count=$(find src/userplugins -name "*.tsx" -o -name "*.ts" | wc -l)
-          echo "✅ Dossier userplugins préservé avec $plugin_count plugins"
+        if [ -d "src/bashplugins" ] && [ "$(ls -A src/bashplugins)" ]; then
+          plugin_count=$(find src/bashplugins -name "*.tsx" -o -name "*.ts" | wc -l)
+          echo "✅ Dossier bashplugins préservé avec $plugin_count plugins"
         else
-          echo "❌ Erreur: Dossier userplugins manquant ou vide!"
+          echo "❌ Erreur: Dossier bashplugins manquant ou vide!"
+          exit 1
+        fi
+        
+        if [ -f "src/components/WelcomeModal.tsx" ] && grep -q "Bashcord" src/components/WelcomeModal.tsx; then
+          echo "✅ WelcomeModal.tsx préservé"
+        else
+          echo "❌ Erreur: WelcomeModal.tsx manquant ou invalide!"
           exit 1
         fi
 

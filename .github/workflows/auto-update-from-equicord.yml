@@ -64,7 +64,8 @@ jobs:
         # Fichiers et dossiers à protéger
         PROTECTED_FILES=(
           "src/plugins/_core/settings.tsx"
-          "src/userplugins"
+          "src/bashplugins"
+          "src/components/WelcomeModal.tsx"
         )
         
         # Sauvegarder chaque fichier protégé
@@ -85,11 +86,18 @@ jobs:
           exit 1
         fi
         
-        if [ -d "backup_bashcord_customizations/userplugins" ] && [ "$(ls -A backup_bashcord_customizations/userplugins)" ]; then
-          plugin_count=$(find backup_bashcord_customizations/userplugins -name "*.tsx" -o -name "*.ts" | wc -l)
-          echo "✅ Sauvegarde userplugins validée ($plugin_count plugins)"
+        if [ -d "backup_bashcord_customizations/bashplugins" ] && [ "$(ls -A backup_bashcord_customizations/bashplugins)" ]; then
+          plugin_count=$(find backup_bashcord_customizations/bashplugins -name "*.tsx" -o -name "*.ts" | wc -l)
+          echo "✅ Sauvegarde bashplugins validée ($plugin_count plugins)"
         else
-          echo "❌ Erreur: Sauvegarde userplugins invalide"
+          echo "❌ Erreur: Sauvegarde bashplugins invalide"
+          exit 1
+        fi
+        
+        if [ -f "backup_bashcord_customizations/WelcomeModal.tsx" ] && grep -q "Bashcord" "backup_bashcord_customizations/WelcomeModal.tsx"; then
+          echo "✅ Sauvegarde WelcomeModal.tsx validée"
+        else
+          echo "❌ Erreur: Sauvegarde WelcomeModal.tsx invalide"
           exit 1
         fi
 
@@ -107,7 +115,8 @@ jobs:
           # Résoudre les conflits pour les fichiers protégés
           PROTECTED_FILES=(
             "src/plugins/_core/settings.tsx"
-            "src/userplugins"
+            "src/bashplugins"
+            "src/components/WelcomeModal.tsx"
           )
           
           for file in "${PROTECTED_FILES[@]}"; do
@@ -129,7 +138,8 @@ jobs:
         # Restaurer les fichiers protégés
         PROTECTED_FILES=(
           "src/plugins/_core/settings.tsx"
-          "src/userplugins"
+          "src/bashplugins"
+          "src/components/WelcomeModal.tsx"
         )
         
         for file in "${PROTECTED_FILES[@]}"; do
@@ -153,12 +163,20 @@ jobs:
           exit 1
         fi
         
-        # Vérifier userplugins
-        if [ -d "src/userplugins" ] && [ "$(ls -A src/userplugins)" ]; then
-          plugin_count=$(find src/userplugins -name "*.tsx" -o -name "*.ts" | wc -l)
-          echo "✅ Dossier userplugins préservé avec $plugin_count plugins"
+        # Vérifier bashplugins
+        if [ -d "src/bashplugins" ] && [ "$(ls -A src/bashplugins)" ]; then
+          plugin_count=$(find src/bashplugins -name "*.tsx" -o -name "*.ts" | wc -l)
+          echo "✅ Dossier bashplugins préservé avec $plugin_count plugins"
         else
-          echo "❌ Erreur: Dossier userplugins manquant ou vide!"
+          echo "❌ Erreur: Dossier bashplugins manquant ou vide!"
+          exit 1
+        fi
+        
+        # Vérifier WelcomeModal.tsx
+        if [ -f "src/components/WelcomeModal.tsx" ] && grep -q "Bashcord" src/components/WelcomeModal.tsx; then
+          echo "✅ WelcomeModal.tsx préservé"
+        else
+          echo "❌ Erreur: WelcomeModal.tsx manquant ou invalide!"
           exit 1
         fi
 
@@ -176,7 +194,8 @@ jobs:
         📥 Intégration de ${{ steps.check_commits.outputs.new_commits }} nouveaux commits d'Equicord
         🛡️ Protection des personnalisations Bashcord:
           • src/plugins/_core/settings.tsx (interface Bashcord)
-          • src/userplugins/ (plugins personnalisés)
+          • src/bashplugins/ (plugins personnalisés)
+          • src/components/WelcomeModal.tsx (popup de bienvenue)
         
         🔗 Source: https://github.com/Equicord/Equicord"
         
@@ -212,7 +231,8 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🛡️ Fichiers protégés:" >> $GITHUB_STEP_SUMMARY
         echo "- \`src/plugins/_core/settings.tsx\` (interface Bashcord)" >> $GITHUB_STEP_SUMMARY
-        echo "- \`src/userplugins/\` (plugins personnalisés)" >> $GITHUB_STEP_SUMMARY
+        echo "- \`src/bashplugins/\` (plugins personnalisés)" >> $GITHUB_STEP_SUMMARY
+        echo "- \`src/components/WelcomeModal.tsx\` (popup de bienvenue)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🔗 Liens utiles:" >> $GITHUB_STEP_SUMMARY
         echo "- [Repository Equicord](https://github.com/Equicord/Equicord)" >> $GITHUB_STEP_SUMMARY
