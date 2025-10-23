@@ -144,11 +144,6 @@ const settings = definePluginSettings({
         markers: [0, 25, 50, 75, 100],
         stickToMarkers: false,
     },
-    showFloatingButton: {
-        type: OptionType.BOOLEAN,
-        description: "Afficher le bouton flottant 🔊",
-        default: true,
-    },
     enableCustomSounds: {
         type: OptionType.BOOLEAN,
         description: "Permettre l'ajout de sons personnalisés",
@@ -305,6 +300,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
     const [isPlaying, setIsPlaying] = useState<string | null>(null);
     const [customSoundUrl, setCustomSoundUrl] = useState("");
     const [customSoundName, setCustomSoundName] = useState("");
+    const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
 
     const handlePlaySound = async (sound: Sound) => {
         setIsPlaying(sound.id);
@@ -312,10 +308,10 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
         setTimeout(() => setIsPlaying(null), 1000);
     };
 
-    // Fonction pour ajouter un son personnalisé
+    // Fonction pour ajouter un son personnalisé via URL
     const addCustomSound = () => {
         if (!customSoundUrl.trim() || !customSoundName.trim()) return;
-
+        
         const newSound: Sound = {
             id: `custom_${Date.now()}`,
             name: customSoundName,
@@ -325,16 +321,68 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
             duration: 1.0,
             type: 'sine'
         };
-
+        
         setSounds([...sounds, newSound]);
         setCustomSoundUrl("");
         setCustomSoundName("");
-
+        
         showNotification({
             title: "🔊 Soundboard Pro",
             body: "Son personnalisé ajouté !",
             color: "var(--green-360)",
         });
+    };
+
+    // Fonction pour ouvrir le sélecteur de fichier MP3
+    const openFileSelector = () => {
+        if (fileInputRef) {
+            fileInputRef.click();
+        }
+    };
+
+    // Fonction pour gérer la sélection de fichier
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Vérifier que c'est un fichier audio
+        if (!file.type.startsWith('audio/')) {
+            showNotification({
+                title: "🔊 Soundboard Pro",
+                body: "Veuillez sélectionner un fichier audio (MP3, WAV, OGG, etc.)",
+                color: "var(--red-360)",
+            });
+            return;
+        }
+
+        // Créer une URL pour le fichier
+        const fileUrl = URL.createObjectURL(file);
+        
+        // Extraire le nom du fichier sans extension
+        const fileName = file.name.replace(/\.[^/.]+$/, "");
+        
+        const newSound: Sound = {
+            id: `file_${Date.now()}`,
+            name: fileName,
+            emoji: "🎵",
+            url: fileUrl,
+            frequency: 440,
+            duration: 1.0,
+            type: 'sine'
+        };
+        
+        setSounds([...sounds, newSound]);
+        
+        showNotification({
+            title: "🔊 Soundboard Pro",
+            body: `Fichier "${fileName}" ajouté au soundboard !`,
+            color: "var(--green-360)",
+        });
+
+        // Réinitialiser l'input
+        if (fileInputRef) {
+            fileInputRef.value = '';
+        }
     };
 
     return (
@@ -388,14 +436,39 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
 
                 {/* Ajout de son personnalisé */}
                 {settings.store.enableCustomSounds && (
-                    <div style={{
-                        borderTop: "1px solid var(--background-modifier-accent)",
-                        paddingTop: "16px"
+                    <div style={{ 
+                        borderTop: "1px solid var(--background-modifier-accent)", 
+                        paddingTop: "16px" 
                     }}>
                         <BaseText size="md" weight="semibold" style={{ marginBottom: "12px" }}>
                             ➕ Ajouter un Son Personnalisé
                         </BaseText>
+                        
+                        {/* Input file caché */}
+                        <input
+                            ref={setFileInputRef}
+                            type="file"
+                            accept="audio/*"
+                            onChange={handleFileSelect}
+                            style={{ display: "none" }}
+                        />
+                        
                         <Flex direction={Flex.Direction.VERTICAL} style={{ gap: "8px" }}>
+                            {/* Bouton pour sélectionner un fichier MP3 */}
+                            <Button
+                                onClick={openFileSelector}
+                                color={Button.Colors.BRAND}
+                                size={Button.Sizes.SMALL}
+                                style={{ width: "100%" }}
+                            >
+                                📁 Sélectionner un fichier MP3
+                            </Button>
+                            
+                            <BaseText size="sm" style={{ color: "var(--text-muted)", textAlign: "center" }}>
+                                ou
+                            </BaseText>
+                            
+                            {/* Ajout via URL */}
                             <input
                                 type="text"
                                 placeholder="Nom du son"
@@ -430,7 +503,7 @@ function SoundboardModal({ modalProps }: { modalProps: ModalProps; }) {
                                 color={Button.Colors.GREEN}
                                 size={Button.Sizes.SMALL}
                             >
-                                Ajouter le Son
+                                Ajouter via URL
                             </Button>
                         </Flex>
                     </div>
@@ -470,12 +543,12 @@ const PanelButton = findComponentByCodeLazy(".NONE,disabled:", ".PANEL_BUTTON");
 
 function SoundboardIcon() {
     return (
-        <img 
-            src="./src/bashplugins/soundboardPro/icone.webp" 
-            alt="Soundboard Pro" 
-            width="28" 
+        <img
+            src="./src/bashplugins/soundboardPro/icone.webp"
+            alt="Soundboard Pro"
+            width="28"
             height="28"
-            style={{ 
+            style={{
                 borderRadius: "4px",
                 objectFit: "cover"
             }}
@@ -523,58 +596,13 @@ function SettingsComponent() {
                 • 3 modes de lecture (synthétique, URL, hybride)<br />
                 • Bouton intégré dans le panel vocal<br />
                 • Sons joués directement dans Discord<br />
+                • Sélection de fichiers MP3 locaux<br />
                 • Interface avancée avec grille responsive
             </BaseText>
         </div>
     );
 }
 
-// Fonction pour créer le bouton flottant
-function createFloatingButton() {
-    const button = document.createElement('button');
-    
-    // Créer l'image pour l'icône
-    const iconImg = document.createElement('img');
-    iconImg.src = './src/bashplugins/soundboardPro/icone.webp';
-    iconImg.alt = 'Soundboard Pro';
-    iconImg.style.cssText = `
-        width: 40px;
-        height: 40px;
-        border-radius: 4px;
-        object-fit: cover;
-    `;
-    
-    button.appendChild(iconImg);
-    button.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 9999;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        border: none;
-        background: var(--brand-500);
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-    `;
-    
-    button.addEventListener('click', openSoundboardPro);
-    button.addEventListener('mouseenter', () => {
-        button.style.transform = 'scale(1.1)';
-        button.style.background = 'var(--brand-400)';
-    });
-    button.addEventListener('mouseleave', () => {
-        button.style.transform = 'scale(1)';
-        button.style.background = 'var(--brand-500)';
-    });
-    
-    return button;
-}
 
 
 export default definePlugin({
@@ -597,23 +625,9 @@ export default definePlugin({
 
     start() {
         console.log("[SoundboardPro] Plugin démarré - Version fusionnée avec patch");
-
-        // Ajouter le bouton flottant si activé
-        if (settings.store.showFloatingButton) {
-            const button = createFloatingButton();
-            button.id = 'bashcord-soundboard-pro-button';
-            document.body.appendChild(button);
-        }
-
     },
 
     stop() {
         console.log("[SoundboardPro] Plugin arrêté");
-
-        // Supprimer le bouton flottant
-        const buttonElement = document.getElementById('bashcord-soundboard-pro-button');
-        if (buttonElement) {
-            buttonElement.remove();
-        }
     }
 });
