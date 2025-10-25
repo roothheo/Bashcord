@@ -1,7 +1,7 @@
-# [<img src="./browser/icon.png" width="40" align="left" alt="Bashcord">](https://github.com/Bashcord/Bashcord) Bashcord
+# [<img src="./browser/icon.png" width="40" align="left" alt="Bashcord">](https://github.com/roothheo/Bashcord) Bashcord
 
-[![Bashcord](https://img.shields.io/badge/Bashcord-blue?style=flat)](https://github.com/Bashcord/Bashcord)
-[![Tests](https://github.com/Bashcord/Bashcord/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/Bashcord/Bashcord/actions/workflows/test.yml)
+[![Bashcord](https://img.shields.io/badge/Bashcord-blue?style=flat)](https://github.com/roothheo/Bashcord)
+[![Tests](https://github.com/roothheo/Bashcord/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/roothheo/Bashcord/actions/workflows/test.yml)
 [![Discord](https://img.shields.io/discord/1173279886065029291.svg?color=768AD4&label=Discord&logo=discord&logoColor=white)](https://discord.gg/bashcord)
 
 Bashcord est un fork personnalisé d'[Equicord](https://github.com/Equicord/Equicord) (lui-même basé sur [Vencord](https://github.com/Vendicated/Vencord)), avec des plugins exclusifs et une interface personnalisée.
@@ -39,21 +39,21 @@ Bashcord inclut tous les plugins d'Equicord plus nos plugins exclusifs :
 **Windows**
 ```bash
 # Télécharger et exécuter l'installateur
-curl -L https://github.com/Bashcord/Bashcord/releases/latest/download/bashcord-installer.exe -o bashcord-installer.exe
+curl -L https://github.com/roothheo/Bashcord/releases/latest/download/bashcord-installer.exe -o bashcord-installer.exe
 ./bashcord-installer.exe
 ```
 
 **Linux/macOS**
 ```bash
 # Script d'installation automatique
-curl -sS https://raw.githubusercontent.com/Bashcord/Bashcord/main/misc/install.sh | bash
+curl -sS https://raw.githubusercontent.com/roothheo/Bashcord/main/misc/install.sh | bash
 ```
 
 ### Installation manuelle
 
 1. **Cloner le repository**
 ```bash
-git clone https://github.com/Bashcord/Bashcord.git
+git clone https://github.com/roothheo/Bashcord.git
 cd Bashcord
 ```
 
@@ -195,8 +195,8 @@ De plus, assurez-vous de ne pas publier de captures d'écran avec Bashcord dans 
 ## 📞 Support
 
 - **Discord** : [Rejoignez notre serveur](https://discord.gg/bashcord)
-- **Issues** : [GitHub Issues](https://github.com/Bashcord/Bashcord/issues)
-- **Documentation** : [Wiki du projet](https://github.com/Bashcord/Bashcord/wiki)
+- **Issues** : [GitHub Issues](https://github.com/roothheo/Bashcord/issues)
+- **Documentation** : [Wiki du projet](https://github.com/roothheo/Bashcord/wiki)
 
 ---
 
