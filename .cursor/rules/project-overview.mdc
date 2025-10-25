@@ -1,0 +1,31 @@
+---
+alwaysApply: true
+---
+
+# Bashcord Project Overview
+
+Bashcord is a customized Discord client mod based on Equicord (which is a fork of Vencord). This project maintains its own branding and custom plugins while automatically syncing updates from the upstream Equicord repository.
+
+## Key Project Structure
+
+- **Main Entry Point**: [src/Vencord.ts](mdc:src/Vencord.ts) - Core initialization and welcome popup integration
+- **Settings UI**: [src/plugins/_core/settings.tsx](mdc:src/plugins/_core/settings.tsx) - Customized settings with "Bashcord" branding
+- **Custom Plugins**: [src/bashplugins/](mdc:src/bashplugins/) - Bashcord-specific plugins (moved from userplugins)
+- **Welcome Modal**: [src/components/WelcomeModal.tsx](mdc:src/components/WelcomeModal.tsx) - Welcome popup for new users
+- **Build Scripts**: [scripts/build/](mdc:scripts/build/) - Build system for plugins and main app
+- **GitHub Workflows**: [.github/workflows/](mdc:.github/workflows/) - CI/CD for updates, building, and releases
+
+## Important Branding Changes
+
+- All "Equicord" references should be changed to "Bashcord" in user-facing text
+- Settings tab labeled "Bashplugins" instead of "Plugins"
+- Custom plugins directory is `bashplugins/` not `userplugins/`
+- Release files should be prefixed with "bashcord" not "equibop"
+
+## Protected Files During Updates
+
+These files are protected during automatic Equicord updates:
+- `src/plugins/_core/settings.tsx` - Bashcord branding
+- `src/bashplugins/` - Custom Bashcord plugins
+- `src/components/WelcomeModal.tsx` - Welcome popup
+- `.github/workflows/` - Custom CI/CD workflows

@@ -1,0 +1,100 @@
+---
+description: Guidelines for the Bashcord welcome modal system
+---
+
+# Welcome Modal System
+
+## Overview
+
+Bashcord includes a welcome modal system that greets new users and encourages them to join the Discord server. This system is integrated directly into the core Vencord initialization.
+
+## Implementation
+
+### Core Integration
+The welcome system is integrated in [src/Vencord.ts](mdc:src/Vencord.ts):
+
+```typescript
+import { openWelcomeModal } from "./components/WelcomeModal";
+
+// In init() function
+setTimeout(() => {
+    const hasShownWelcome = localStorage.getItem("bashcord-welcome-shown");
+    
+    if (!hasShownWelcome) {
+        openWelcomeModal();
+        localStorage.setItem("bashcord-welcome-shown", "true");
+    }
+}, 3000);
+```
+
+### Welcome Modal Component
+The modal is defined in [src/components/WelcomeModal.tsx](mdc:src/components/WelcomeModal.tsx):
+
+```typescript
+export function WelcomeModal({ modalProps }: { modalProps: ModalProps; }) {
+    return (
+        <ModalRoot {...modalProps} size={ModalSize.MEDIUM}>
+            <ModalHeader>
+                <BaseText size="lg" weight="semibold">
+                    🎉 Bienvenue sur Bashcord !
+                </BaseText>
+            </ModalHeader>
+            <ModalContent>
+                {/* Welcome content */}
+            </ModalContent>
+            <ModalFooter>
+                {/* Action buttons */}
+            </ModalFooter>
+        </ModalRoot>
+    );
+}
+```
+
+## Key Features
+
+### One-Time Display
+- Uses `localStorage` to track if welcome has been shown
+- Key: `"bashcord-welcome-shown"`
+- Value: `"true"` when shown
+
+### Discord Server Integration
+- Includes button to join Discord server
+- URL: `https://discord.gg/GxbcPKKCnS`
+- Opens in new tab/window
+
+### Debug Functions
+Two debug functions are available in the browser console:
+
+```javascript
+// Force show welcome modal
+testBashcordWelcome();
+
+// Reset welcome state (show again)
+resetBashcordWelcome();
+```
+
+## Customization Guidelines
+
+### Modifying Welcome Content
+1. Edit the content in `WelcomeModal.tsx`
+2. Update the Discord server URL if needed
+3. Modify the styling using Discord's CSS variables
+
+### Changing Display Logic
+1. Modify the timing in `Vencord.ts` (currently 3 seconds)
+2. Change the localStorage key if needed
+3. Update the condition for showing the modal
+
+### Adding Features
+- Add more buttons to the modal footer
+- Include additional information in the content
+- Add animations or transitions
+- Integrate with other Bashcord features
+
+## Important Notes
+
+- The welcome modal is shown only once per installation
+- It's integrated into the core initialization, not as a separate plugin
+- The modal uses Discord's native modal system for consistency
+- Debug functions are available for testing and development
+- The system is protected during Equicord updates

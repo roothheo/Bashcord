@@ -1,0 +1,65 @@
+---
+globs: src/bashplugins/**/*.tsx,src/bashplugins/**/*.ts,src/plugins/**/*.tsx,src/plugins/**/*.ts
+---
+
+# Plugin Development Guidelines
+
+## Plugin Structure
+
+All Bashcord custom plugins should be placed in [src/bashplugins/](mdc:src/bashplugins/) directory. Follow this structure:
+
+```typescript
+import { definePluginSettings } from "@api/Settings";
+import { Devs } from "@utils/constants";
+import definePlugin, { OptionType } from "@utils/types";
+import { Button, Flex, React } from "@webpack/common";
+
+const settings = definePluginSettings({
+    // Plugin settings here
+});
+
+export default definePlugin({
+    name: "PluginName",
+    description: "Plugin description",
+    authors: [{ name: "Bashcord", id: 1234567890123456789n }], // Use Bashcord as author
+    required: false,
+    
+    settings,
+    
+    patches: [
+        // Patches here
+    ],
+    
+    start() {
+        // Plugin initialization
+    },
+    
+    stop() {
+        // Plugin cleanup
+    }
+});
+```
+
+## Key Guidelines
+
+1. **Author Field**: Always use `{ name: "Bashcord", id: 1234567890123456789n }` for custom plugins
+2. **Import Paths**: Use `@api/`, `@utils/`, `@webpack/`, `@components/` aliases
+3. **Settings**: Use `definePluginSettings` for plugin configuration
+4. **Patches**: Use the patching system to modify Discord's behavior
+5. **UI Components**: Use Discord's existing components from `@webpack/common`
+
+## Common Patterns
+
+- **Modal Integration**: Use `openModal`, `ModalRoot`, `ModalHeader`, etc. from `@utils/modal`
+- **Notifications**: Use `showNotification` from `@api/Notifications`
+- **Audio Playback**: Use `playAudio` from `@api/AudioPlayer`
+- **Component Finding**: Use `findComponentByCodeLazy` from `@webpack` for Discord components
+
+## Example: SoundboardPro Plugin
+
+See [src/bashplugins/soundboardPro/index.tsx](mdc:src/bashplugins/soundboardPro/index.tsx) for a comprehensive example of:
+- Complex plugin settings
+- Audio playback integration
+- UI component integration
+- File handling for local audio files
+- Discord voice panel integration

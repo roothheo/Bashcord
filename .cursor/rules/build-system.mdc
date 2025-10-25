@@ -1,0 +1,47 @@
+---
+globs: scripts/**/*.mjs,scripts/**/*.js,scripts/**/*.ts
+---
+
+# Build System Guidelines
+
+## Build Scripts
+
+The build system is located in [scripts/build/](mdc:scripts/build/) and handles:
+
+- **Main Build**: [scripts/build/build.mjs](mdc:scripts/build/build.mjs) - Desktop app build
+- **Web Build**: [scripts/build/buildWeb.mjs](mdc:scripts/build/buildWeb.mjs) - Web version build  
+- **Common Logic**: [scripts/build/common.mjs](mdc:scripts/build/common.mjs) - Shared build utilities
+
+## Plugin Directories
+
+The build system processes plugins from these directories in order:
+1. `plugins/_api` - API plugins
+2. `plugins/_core` - Core functionality plugins
+3. `plugins` - Standard plugins
+4. `bashplugins` - **Bashcord custom plugins** (replaces userplugins)
+5. `equicordplugins` - Equicord-specific plugins
+6. `equicordplugins/_api` - Equicord API plugins
+
+## Key Build Configuration
+
+- **Package Manager**: Uses `pnpm` (see [package.json](mdc:package.json))
+- **Bundler**: Uses `esbuild` for fast builds
+- **TypeScript**: Uses `tsx` for TypeScript execution
+- **Plugin Processing**: Custom plugins in `bashplugins/` are marked as user plugins
+
+## Build Commands
+
+```bash
+pnpm build          # Build desktop version
+pnpm buildWeb       # Build web version  
+pnpm buildStandalone # Build standalone version
+pnpm watch          # Development build with watching
+pnpm dev            # Alias for watch
+```
+
+## Important Notes
+
+- Custom plugins in `bashplugins/` are treated as user plugins by the build system
+- The build system automatically includes all `.tsx` and `.ts` files in plugin directories
+- Plugin metadata is generated automatically during build
+- Build outputs go to `dist/` directory with proper naming conventions

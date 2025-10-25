@@ -1,0 +1,52 @@
+---
+globs: .github/workflows/*.yml,.github/workflows/*.yaml
+---
+
+# GitHub Actions Workflows
+
+## Workflow Overview
+
+The CI/CD system uses several GitHub Actions workflows in [.github/workflows/](mdc:.github/workflows/):
+
+### Core Workflows
+
+1. **Release Workflow**: [.github/workflows/release.yml](mdc:.github/workflows/release.yml)
+   - Triggers on push to `main` branch
+   - Builds and releases Bashcord with proper naming
+   - Renames `equibop*` files to `bashcord*` in releases
+
+2. **Publish Workflow**: [.github/workflows/publish.yml](mdc:.github/workflows/publish.yml)
+   - Handles GitHub releases and asset uploads
+   - Ensures proper file naming for Bashcord branding
+
+3. **Sync Workflow**: [.github/workflows/sync-equicord.yml](mdc:.github/workflows/sync-equicord.yml)
+   - Automatically syncs updates from Equicord repository
+   - Protects Bashcord-specific files during merges
+
+## Protected Files During Updates
+
+The sync workflows protect these Bashcord-specific files:
+- `src/plugins/_core/settings.tsx` - Bashcord branding in settings
+- `src/bashplugins/` - Custom Bashcord plugins directory
+- `src/components/WelcomeModal.tsx` - Welcome popup component
+- `.github/workflows/` - Custom CI/CD workflows
+
+## File Naming Convention
+
+- **Build Output**: Files are built as `equibop*` (from Equicord base)
+- **Release Output**: Files are renamed to `bashcord*` for releases
+- **Example**: `equibopMain.js` → `bashcordmain.js`
+
+## Workflow Environment
+
+- **Node Version**: 20 (LTS)
+- **Package Manager**: pnpm
+- **Build Command**: `pnpm build`
+- **Repository**: `roothheo/Bashcord`
+
+## Important Notes
+
+- Workflows automatically handle file renaming from Equicord to Bashcord
+- Protected files are backed up and restored during updates
+- Release assets are properly branded with "bashcord" prefix
+- CI/CD system maintains Bashcord identity while staying updated with Equicord

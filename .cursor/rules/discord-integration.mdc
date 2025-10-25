@@ -1,0 +1,134 @@
+---
+description: Guidelines for integrating with Discord's interface and APIs
+---
+
+# Discord Integration Guidelines
+
+## Patching Discord's Interface
+
+### Finding Components
+```typescript
+import { findComponentByCodeLazy } from "@webpack";
+
+// Find Discord components by their code patterns
+const PanelButton = findComponentByCodeLazy(".NONE,disabled:", ".PANEL_BUTTON");
+```
+
+### Common Patch Patterns
+
+1. **Adding UI Elements**:
+```typescript
+patches: [
+    {
+        find: "#{intl::ACCOUNT_SPEAKING_WHILE_MUTED}",
+        replacement: {
+            match: /className:\i\.buttons,.{0,50}children:\[/,
+            replace: "$&$self.MyComponent(),"
+        }
+    }
+]
+```
+
+2. **Modifying Existing Components**:
+```typescript
+patches: [
+    {
+        find: ".versionHash",
+        replacement: {
+            match: /\.info.+?\[\(0,\i\.jsxs?\)\((.{1,10}),(\{[^{}}]+\{.{0,20}.versionHash,.+?\})\)," "/,
+            replace: (m, component, props) => {
+                // Custom logic here
+                return `${m},$self.makeInfoElements(${component}, ${props})`;
+            }
+        }
+    }
+]
+```
+
+## Audio Integration
+
+### Playing Sounds in Discord
+```typescript
+import { playAudio } from "@api/AudioPlayer";
+
+// Play audio through Discord's system
+playAudio(audioUrl, {
+    volume: 0.5,
+    persistent: false
+});
+```
+
+### Local File Handling
+```typescript
+// Convert local files to blob URLs
+const file = event.target.files[0];
+const blobUrl = URL.createObjectURL(file);
+
+// Play local audio
+await playLocalAudioFileInDiscord(blobUrl, volume);
+```
+
+## Modal and Notification Systems
+
+### Opening Modals
+```typescript
+import { openModal, ModalRoot, ModalHeader, ModalContent } from "@utils/modal";
+
+const modalKey = openModal(modalProps => (
+    <ModalRoot {...modalProps} size={ModalSize.MEDIUM}>
+        <ModalHeader>
+            <BaseText>Title</BaseText>
+        </ModalHeader>
+        <ModalContent>
+            {/* Content */}
+        </ModalContent>
+    </ModalRoot>
+));
+```
+
+### Showing Notifications
+```typescript
+import { showNotification } from "@api/Notifications";
+
+showNotification({
+    title: "Success",
+    body: "Operation completed",
+    color: "var(--green-360)"
+});
+```
+
+## Voice Panel Integration
+
+### Adding Buttons to Voice Panel
+```typescript
+// Create a button component
+function MyVoiceButton() {
+    return (
+        <PanelButton
+            tooltipText="My Feature"
+            icon={MyIcon}
+            onClick={handleClick}
+        />
+    );
+}
+
+// Patch to add button to voice panel
+patches: [
+    {
+        find: "#{intl::ACCOUNT_SPEAKING_WHILE_MUTED}",
+        replacement: {
+            match: /className:\i\.buttons,.{0,50}children:\[/,
+            replace: "$&$self.MyVoiceButton(),"
+        }
+    }
+],
+MyVoiceButton
+```
+
+## Important Notes
+
+- Always test patches thoroughly as Discord updates can break them
+- Use `findComponentByCodeLazy` for reliable component finding
+- Be careful with regex patterns in patches - they can be fragile
+- Consider fallbacks for when Discord's interface changes
+- Use Discord's existing styling system (`var(--css-variables)`)

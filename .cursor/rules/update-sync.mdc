@@ -1,0 +1,88 @@
+---
+description: Guidelines for maintaining Bashcord while syncing with upstream Equicord
+---
+
+# Update and Sync Guidelines
+
+## Automatic Sync System
+
+Bashcord automatically syncs updates from the upstream Equicord repository while preserving customizations through GitHub Actions workflows.
+
+### Protected Files
+
+These files are automatically protected during updates:
+- `src/plugins/_core/settings.tsx` - Bashcord branding and settings
+- `src/bashplugins/` - All custom Bashcord plugins
+- `src/components/WelcomeModal.tsx` - Welcome popup component
+- `.github/workflows/` - Custom CI/CD workflows
+
+### Sync Process
+
+1. **Daily Automatic Updates**: [.github/workflows/sync-equicord.yml](mdc:.github/workflows/sync-equicord.yml)
+   - Runs daily to check for Equicord updates
+   - Backs up protected files before merge
+   - Restores protected files after merge
+   - Creates pull request for review
+
+2. **Manual Updates**: Can be triggered manually via GitHub Actions
+
+## Manual Update Process
+
+When making manual updates or resolving conflicts:
+
+### 1. Preserve Bashcord Branding
+```typescript
+// In settings.tsx - Always keep Bashcord branding
+{
+    section: SectionTypes.HEADER,
+    label: "Bashcord", // NOT "Equicord"
+    className: "vc-settings-header"
+},
+{
+    section: "BashcordPlugins",
+    label: "Bashplugins", // NOT "Plugins"
+    element: PluginsTab,
+    className: "vc-plugins",
+}
+```
+
+### 2. Maintain Custom Plugins
+- Keep all plugins in `src/bashplugins/` directory
+- Ensure build scripts reference `bashplugins` not `userplugins`
+- Update `.gitignore` to include `bashplugins/` in version control
+
+### 3. Update Workflows
+- Ensure workflows reference correct directories
+- Update file naming from `equibop*` to `bashcord*`
+- Maintain protected files list
+
+## Conflict Resolution
+
+### Common Conflicts and Solutions
+
+1. **Settings UI Changes**:
+   - Keep Bashcord branding in `makeSettingsCategories`
+   - Merge new features while preserving custom labels
+
+2. **Build System Updates**:
+   - Update plugin directories to include `bashplugins`
+   - Ensure custom plugins are properly processed
+
+3. **Package.json Changes**:
+   - Merge dependency updates
+   - Keep Bashcord-specific scripts if any
+
+### Testing After Updates
+
+1. **Build Test**: `pnpm build` should complete without errors
+2. **Plugin Test**: Custom plugins should load correctly
+3. **UI Test**: Settings should show "Bashcord" branding
+4. **Welcome Test**: Welcome popup should appear for new users
+
+## Best Practices
+
+- Always test updates in a development environment first
+- Keep backups of critical customizations
+- Document any manual changes made during updates
+- Use descriptive commit messages for update-related changes
+- Monitor GitHub Actions for any sync failures

@@ -1,0 +1,93 @@
+---
+globs: *.ts,*.tsx,*.js,*.jsx
+---
+
+# Coding Standards and Best Practices
+
+## TypeScript/JavaScript Guidelines
+
+### Import Organization
+```typescript
+// 1. External libraries
+import { React } from "@webpack/common";
+
+// 2. Internal API imports
+import { definePluginSettings } from "@api/Settings";
+import { showNotification } from "@api/Notifications";
+
+// 3. Utility imports
+import { Devs } from "@utils/constants";
+import definePlugin, { OptionType } from "@utils/types";
+
+// 4. Component imports
+import { BaseText } from "@components/BaseText";
+```
+
+### Plugin Development Standards
+
+1. **Always use semicolons** - Required for consistency
+2. **Use TypeScript interfaces** for complex data structures
+3. **Prefer `const` over `let`** when possible
+4. **Use descriptive variable names** - Avoid abbreviations
+5. **Add JSDoc comments** for complex functions
+
+### Error Handling
+
+```typescript
+try {
+    // Risky operation
+    await someAsyncOperation();
+} catch (error) {
+    console.error("[PluginName] Error:", error);
+    // Handle error gracefully
+}
+```
+
+### Console Logging
+
+- Use descriptive prefixes: `[PluginName]` or `[Bashcord]`
+- Use appropriate log levels: `console.log`, `console.error`, `console.warn`
+- Remove debug logs before production commits
+
+## React Component Guidelines
+
+### Component Structure
+```typescript
+function MyComponent({ prop1, prop2 }: Props) {
+    const [state, setState] = useState(initialValue);
+    
+    // Event handlers
+    const handleClick = () => {
+        // Handler logic
+    };
+    
+    return (
+        <div>
+            {/* JSX content */}
+        </div>
+    );
+}
+```
+
+### Hooks Usage
+- Use `useState` for local component state
+- Use `useRef` for DOM references
+- Use `useEffect` for side effects
+- Prefer custom hooks for reusable logic
+
+## File Naming Conventions
+
+- **Components**: PascalCase (e.g., `WelcomeModal.tsx`)
+- **Plugins**: camelCase directories (e.g., `soundboardPro/`)
+- **Utilities**: camelCase (e.g., `common.mjs`)
+- **Config files**: kebab-case (e.g., `eslint.config.mjs`)
+
+## Git Commit Messages
+
+Use descriptive commit messages with emojis:
+- 🔧 for fixes and corrections
+- ✨ for new features
+- 🎨 for UI/styling changes
+- 📝 for documentation
+- 🚀 for releases
+- 🔄 for updates and merges
