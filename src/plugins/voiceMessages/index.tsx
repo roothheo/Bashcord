@@ -18,6 +18,7 @@
 
 import "./styles.css";
 
+import { addChatBarButton, ChatBarButton, removeChatBarButton } from "@api/ChatButtons";
 import { NavContextMenuPatchCallback } from "@api/ContextMenu";
 import { Heading } from "@components/Heading";
 import { Microphone } from "@components/Icons";
@@ -32,7 +33,7 @@ import { chooseFile } from "@utils/web";
 import { CloudUpload as TCloudUpload } from "@vencord/discord-types";
 import { CloudUploadPlatform } from "@vencord/discord-types/enums";
 import { findByPropsLazy, findLazy, findStoreLazy } from "@webpack";
-import { Button, Card, Constants, FluxDispatcher, lodash, Menu, MessageActions, PermissionsBits, PermissionStore, RestAPI, SelectedChannelStore, showToast, SnowflakeUtils, Toasts, useEffect, useState } from "@webpack/common";
+import { Button, Card, Constants, FluxDispatcher, lodash, Menu, MessageActions, PermissionsBits, PermissionStore, RestAPI, SelectedChannelStore, showToast, SnowflakeUtils, Toasts, useEffect, useState, ChannelStore } from "@webpack/common";
 import { ComponentType } from "react";
 
 import { lastState as silentMessageEnabled } from "../silentMessageToggle";
@@ -77,6 +78,51 @@ export default definePlugin({
     settings,
     contextMenus: {
         "channel-attach": ctxMenuPatch
+    },
+
+    renderChatBarButton: ({ isMainChat }) => {
+        console.log("[VoiceMessages] ChatBarButton appelé", { isMainChat });
+
+        if (!isMainChat) {
+            console.log("[VoiceMessages] Pas le chat principal, bouton masqué");
+            return null;
+        }
+
+        // Vérifier les permissions pour envoyer des messages vocaux
+        const channelId = SelectedChannelStore.getChannelId();
+        const channel = ChannelStore.getChannel(channelId);
+
+        console.log("[VoiceMessages] Vérification permissions", {
+            channelId,
+            channel: channel?.name,
+            hasChannel: !!channel,
+            channelType: channel?.type,
+            isDM: channel?.type === 1,
+            canSendVoiceMessages: channel ? PermissionStore.can(PermissionsBits.SEND_VOICE_MESSAGES, channel) : false,
+            canSendMessages: channel ? PermissionStore.can(PermissionsBits.SEND_MESSAGES, channel) : false
+        });
+
+        // Dans les DMs, on a toujours les permissions d'envoyer des messages vocaux
+        const isDM = channel?.type === 1;
+        const hasVoicePermissions = isDM || (channel && PermissionStore.can(PermissionsBits.SEND_VOICE_MESSAGES, channel));
+
+        if (!channel || !hasVoicePermissions) {
+            console.log("[VoiceMessages] Permissions insuffisantes, bouton masqué", { isDM, hasVoicePermissions });
+            return null;
+        }
+
+        console.log("[VoiceMessages] Bouton microphone affiché");
+        return (
+            <ChatBarButton
+                tooltip="Enregistrer un message vocal"
+                onClick={() => {
+                    console.log("[VoiceMessages] Clic sur le bouton microphone");
+                    openModal(modalProps => <Modal modalProps={modalProps} />);
+                }}
+            >
+                <Microphone width={20} height={20} />
+            </ChatBarButton>
+        );
     }
 });
 
