@@ -45,11 +45,6 @@ const settings = definePluginSettings({
         description: "Supprimer uniquement ses propres messages",
         default: true
     },
-    confirmBeforeDelete: {
-        type: OptionType.BOOLEAN,
-        description: "Demander confirmation avant de commencer le nettoyage",
-        default: true
-    },
     showProgress: {
         type: OptionType.BOOLEAN,
         description: "Afficher la progression en temps réel",
@@ -333,29 +328,6 @@ async function cleanChannel(channelId: string) {
             return;
         }
 
-        // Demander confirmation si activé
-        if (settings.store.confirmBeforeDelete) {
-            const configInfo = `Configuration: ${settings.store.delayBetweenDeletes}ms délai, lot de ${settings.store.batchSize}, ${settings.store.onlyOwnMessages ? "vos messages uniquement" : "tous les messages"}`;
-
-            const confirmed = confirm(
-                `🧹 CONFIRMER LE NETTOYAGE\n\n` +
-                `Canal: "${channelName}"\n` +
-                `Messages estimés: ~${estimatedTotal}\n` +
-                `${configInfo}\n\n` +
-                `⚠️ Cette action est IRRÉVERSIBLE !\n` +
-                `Êtes-vous sûr de vouloir continuer ?`
-            );
-
-            if (!confirmed) {
-                log("Nettoyage annulé par l'utilisateur");
-                showNotification({
-                    title: "❌ Nettoyage annulé",
-                    body: "Opération annulée par l'utilisateur",
-                    icon: undefined
-                });
-                return;
-            }
-        }
 
         log(`📊 Estimation: ${estimatedTotal} messages à supprimer`);
         log(`⚙️ Configuration: délai ${settings.store.delayBetweenDeletes}ms, batch ${settings.store.batchSize}`);
@@ -625,7 +597,6 @@ export default definePlugin({
 • Délai: ${settings.store.delayBetweenDeletes}ms
 • Batch: ${settings.store.batchSize}
 • Propres messages: ${settings.store.onlyOwnMessages}
-• Confirmation: ${settings.store.confirmBeforeDelete}
 • Age max: ${settings.store.maxAge} jours
 • Mode debug: ${settings.store.debugMode}`);
 
