@@ -13,13 +13,18 @@ const settings = definePluginSettings({
     model: {
         type: OptionType.SELECT,
         description: "Modèle ChatGPT à utiliser",
-        default: "gpt-3.5-turbo",
+        default: "gpt-4o-mini",
         options: [
-            { label: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
-            { label: "GPT-4", value: "gpt-4" },
-            { label: "GPT-4 Turbo", value: "gpt-4-turbo-preview" },
+            { label: "GPT-4o (2024-08-06) - Recommandé", value: "gpt-4o-2024-08-06" },
+            { label: "GPT-4o Mini (2024-07-18) - Rapide & Économique", value: "gpt-4o-mini-2024-07-18" },
+            { label: "GPT-4o Mini", value: "gpt-4o-mini" },
             { label: "GPT-4o", value: "gpt-4o" },
-            { label: "GPT-4o Mini", value: "gpt-4o-mini" }
+            { label: "GPT-4 Turbo (2024-04-09)", value: "gpt-4-turbo-2024-04-09" },
+            { label: "GPT-4 Turbo", value: "gpt-4-turbo-preview" },
+            { label: "GPT-4 (0613)", value: "gpt-4-0613" },
+            { label: "GPT-4", value: "gpt-4" },
+            { label: "GPT-3.5 Turbo (0125)", value: "gpt-3.5-turbo-0125" },
+            { label: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" }
         ]
     },
     maxTokens: {

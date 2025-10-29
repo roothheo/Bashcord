@@ -45,9 +45,9 @@ const settings = definePluginSettings({
         description: "Supprimer uniquement ses propres messages",
         default: true
     },
-    requireDoubleClick: {
+    confirmBeforeDelete: {
         type: OptionType.BOOLEAN,
-        description: "Demander un double-clic pour confirmer (au lieu d'une boîte de dialogue)",
+        description: "Demander confirmation avant de commencer le nettoyage",
         default: true
     },
     showProgress: {
@@ -79,13 +79,12 @@ const settings = definePluginSettings({
 // Variables globales pour le contrôle
 let isCleaningInProgress = false;
 let shouldStopCleaning = false;
-let lastClickTime = 0;
-let clickTimeoutId: number | null = null;
 let cleaningStats = {
     total: 0,
     deleted: 0,
     failed: 0,
-    skipped: 0
+    skipped: 0,
+    startTime: 0
 };
 
 // Fonction de log avec préfixe
@@ -238,13 +237,29 @@ async function getChannelMessages(channelId: string, before?: string): Promise<M
 function updateProgress() {
     if (!settings.store.showProgress) return;
 
-    const { total, deleted, failed, skipped } = cleaningStats;
+    const { total, deleted, failed, skipped, startTime } = cleaningStats;
     const processed = deleted + failed + skipped;
     const percentage = total > 0 ? Math.round((processed / total) * 100) : 0;
 
+    // Calculer le temps écoulé et estimé
+    const elapsed = Date.now() - startTime;
+    const elapsedStr = elapsed < 60000
+        ? `${Math.round(elapsed / 1000)}s`
+        : `${Math.round(elapsed / 60000)}min`;
+
+    let etaStr = "";
+    if (processed > 0 && percentage > 0) {
+        const remaining = total - processed;
+        const rate = processed / (elapsed / 1000); // messages par seconde
+        const eta = remaining / rate;
+        etaStr = eta < 60
+            ? ` (~${Math.round(eta)}s restantes)`
+            : ` (~${Math.round(eta / 60)}min restantes)`;
+    }
+
     showNotification({
         title: `🧹 Nettoyage en cours (${percentage}%)`,
-        body: `Traités: ${processed}/${total} | Supprimés: ${deleted} | Échecs: ${failed} | Ignorés: ${skipped}`,
+        body: `Traités: ${processed}/${total} | Supprimés: ${deleted} | Échecs: ${failed} | Ignorés: ${skipped}\n⏱️ ${elapsedStr}${etaStr}`,
         icon: undefined
     });
 }
@@ -318,29 +333,32 @@ async function cleanChannel(channelId: string) {
             return;
         }
 
-        // Afficher les informations et demander confirmation via notification
-        const configInfo = `Config: ${settings.store.delayBetweenDeletes}ms délai, batch ${settings.store.batchSize}, ${settings.store.onlyOwnMessages ? "propres messages" : "tous messages"}`;
+        // Demander confirmation si activé
+        if (settings.store.confirmBeforeDelete) {
+            const configInfo = `Configuration: ${settings.store.delayBetweenDeletes}ms délai, lot de ${settings.store.batchSize}, ${settings.store.onlyOwnMessages ? "vos messages uniquement" : "tous les messages"}`;
 
-        showNotification({
-            title: `⚠️ Nettoyage prêt`,
-            body: `~${estimatedTotal} messages à supprimer dans "${channelName}". ${configInfo}. Cliquez à nouveau pour CONFIRMER.`,
-            icon: undefined
-        });
+            const confirmed = confirm(
+                `🧹 CONFIRMER LE NETTOYAGE\n\n` +
+                `Canal: "${channelName}"\n` +
+                `Messages estimés: ~${estimatedTotal}\n` +
+                `${configInfo}\n\n` +
+                `⚠️ Cette action est IRRÉVERSIBLE !\n` +
+                `Êtes-vous sûr de vouloir continuer ?`
+            );
+
+            if (!confirmed) {
+                log("Nettoyage annulé par l'utilisateur");
+                showNotification({
+                    title: "❌ Nettoyage annulé",
+                    body: "Opération annulée par l'utilisateur",
+                    icon: undefined
+                });
+                return;
+            }
+        }
 
         log(`📊 Estimation: ${estimatedTotal} messages à supprimer`);
         log(`⚙️ Configuration: délai ${settings.store.delayBetweenDeletes}ms, batch ${settings.store.batchSize}`);
-
-        // Si double-clic requis, attendre la confirmation
-        if (settings.store.requireDoubleClick) {
-            const now = Date.now();
-            if (now - lastClickTime > 3000) { // 3 secondes pour confirmer
-                lastClickTime = now;
-                log("Premier clic détecté, cliquez à nouveau dans les 3 secondes pour confirmer");
-                return; // Premier clic, attendre le second
-            } else {
-                log("Double-clic confirmé, démarrage du nettoyage");
-            }
-        }
 
         // Initialiser les statistiques
         isCleaningInProgress = true;
@@ -349,7 +367,8 @@ async function cleanChannel(channelId: string) {
             total: estimatedTotal,
             deleted: 0,
             failed: 0,
-            skipped: 0
+            skipped: 0,
+            startTime: Date.now()
         };
 
         log(`🧹 Début du nettoyage de "${channelName}" - ${estimatedTotal} message(s) estimé(s)`);
@@ -429,15 +448,24 @@ async function cleanChannel(channelId: string) {
                 }
 
             } catch (error: any) {
-                log(`❌ Erreur dans la boucle de nettoyage: ${error?.message || error}`, "error");
+                const errorMessage = error?.message || error?.toString() || 'Erreur inconnue';
+                const statusCode = error?.status || error?.statusCode || 'N/A';
+
+                log(`❌ Erreur dans la boucle de nettoyage: ${errorMessage} (Status: ${statusCode})`, "error");
                 cleaningStats.failed++;
 
-                // Attendre un peu avant de continuer en cas d'erreur
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Gestion spécifique des erreurs de rate limiting
+                if (statusCode === 429) {
+                    log("Rate limit atteint, pause prolongée...", "warn");
+                    await new Promise(resolve => setTimeout(resolve, 30000)); // 30 secondes
+                } else {
+                    // Attendre un peu avant de continuer en cas d'erreur normale
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 secondes
+                }
 
-                // Si trop d'erreurs, arrêter
-                if (cleaningStats.failed > 10) {
-                    log("Trop d'erreurs, arrêt du nettoyage", "error");
+                // Si trop d'erreurs consécutives, arrêter
+                if (cleaningStats.failed > 15) {
+                    log("Trop d'erreurs consécutives, arrêt du nettoyage", "error");
                     break;
                 }
             }
@@ -446,19 +474,34 @@ async function cleanChannel(channelId: string) {
         // Nettoyage terminé
         isCleaningInProgress = false;
 
-        const { deleted, failed, skipped } = cleaningStats;
+        const { deleted, failed, skipped, startTime } = cleaningStats;
         const finalTotal = deleted + failed + skipped;
+        const totalTime = Date.now() - startTime;
+        const totalTimeStr = totalTime < 60000
+            ? `${Math.round(totalTime / 1000)} secondes`
+            : `${Math.round(totalTime / 60000)} min ${Math.round((totalTime % 60000) / 1000)}s`;
+
+        const avgTimePerMessage = deleted > 0 ? Math.round(totalTime / deleted) : 0;
+        const successRate = finalTotal > 0 ? Math.round((deleted / finalTotal) * 100) : 0;
 
         log(`✅ Nettoyage terminé:
 • Messages traités: ${finalTotal}
 • Supprimés: ${deleted}
 • Échecs: ${failed}
-• Ignorés: ${skipped}`);
+• Ignorés: ${skipped}
+• Temps total: ${totalTimeStr}
+• Taux de succès: ${successRate}%
+• Temps moyen/message: ${avgTimePerMessage}ms`);
 
         const title = shouldStopCleaning ? "⏹️ Nettoyage arrêté" : "✅ Nettoyage terminé";
-        const body = failed > 0
+        let body = failed > 0
             ? `${deleted} supprimés, ${failed} échecs, ${skipped} ignorés`
             : `${deleted} messages supprimés avec succès`;
+
+        // Ajouter les stats de performance si le nettoyage a duré plus de 10 secondes
+        if (totalTime > 10000) {
+            body += `\n⏱️ ${totalTimeStr} (${successRate}% succès)`;
+        }
 
         showNotification({
             title,
@@ -499,26 +542,40 @@ const ChannelContextMenuPatch: NavContextMenuPatchCallback = (children, { channe
     const group = findGroupChildrenByChildId("mark-channel-read", children) ?? children;
 
     if (group) {
-        const menuItems = [
-            <Menu.MenuSeparator key="separator" />,
-            <Menu.MenuItem
-                key="clean-messages"
-                id="vc-clean-messages"
-                label="🧹 Nettoyer les messages"
-                color="danger"
-                action={() => cleanChannel(channel.id)}
-                disabled={isCleaningInProgress}
-            />
-        ];
+        const menuItems = [<Menu.MenuSeparator key="separator" />];
 
         if (isCleaningInProgress) {
+            // Afficher les stats du nettoyage en cours
+            const { total, deleted, failed, skipped, startTime } = cleaningStats;
+            const processed = deleted + failed + skipped;
+            const percentage = total > 0 ? Math.round((processed / total) * 100) : 0;
+            const elapsed = Math.round((Date.now() - startTime) / 1000);
+
             menuItems.push(
+                <Menu.MenuItem
+                    key="cleaning-status"
+                    id="vc-cleaning-status"
+                    label={`🔄 Nettoyage en cours: ${percentage}% (${processed}/${total})`}
+                    color="brand"
+                    disabled={true}
+                />,
                 <Menu.MenuItem
                     key="stop-cleaning"
                     id="vc-stop-cleaning"
                     label="⏹️ Arrêter le nettoyage"
                     color="danger"
                     action={stopCleaning}
+                />
+            );
+        } else {
+            // Option de nettoyage normal
+            menuItems.push(
+                <Menu.MenuItem
+                    key="clean-messages"
+                    id="vc-clean-messages"
+                    label="🧹 Nettoyer les messages"
+                    color="danger"
+                    action={() => cleanChannel(channel.id)}
                 />
             );
         }
@@ -529,7 +586,7 @@ const ChannelContextMenuPatch: NavContextMenuPatchCallback = (children, { channe
 
 export default definePlugin({
     name: "MessageCleaner",
-    description: "Nettoie tous les messages d'un canal avec gestion intelligente du rate limiting",
+    description: "Nettoie tous les messages d'un canal avec gestion intelligente du rate limiting, statistiques temps réel et confirmation sécurisée",
     authors: [{
         name: "Bash",
         id: 1327483363518582784n
@@ -568,7 +625,7 @@ export default definePlugin({
 • Délai: ${settings.store.delayBetweenDeletes}ms
 • Batch: ${settings.store.batchSize}
 • Propres messages: ${settings.store.onlyOwnMessages}
-• Double-clic: ${settings.store.requireDoubleClick}
+• Confirmation: ${settings.store.confirmBeforeDelete}
 • Age max: ${settings.store.maxAge} jours
 • Mode debug: ${settings.store.debugMode}`);
 
@@ -585,12 +642,6 @@ export default definePlugin({
         // Arrêter le nettoyage en cours
         if (isCleaningInProgress) {
             shouldStopCleaning = true;
-        }
-
-        // Nettoyer les timeouts
-        if (clickTimeoutId) {
-            clearTimeout(clickTimeoutId);
-            clickTimeoutId = null;
         }
 
         showNotification({
