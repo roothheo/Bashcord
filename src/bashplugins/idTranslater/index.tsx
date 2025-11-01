@@ -10,6 +10,9 @@ import definePlugin, { OptionType } from "@utils/types";
 import { Message } from "@vencord/discord-types";
 import { ChannelStore, GuildStore, UserStore } from "@webpack/common";
 
+// Variable de contrôle pour retarder l'application du patch
+let patchEnabled = false;
+
 const settings = definePluginSettings({
     translateUserIds: {
         type: OptionType.BOOLEAN,
@@ -210,14 +213,16 @@ export default definePlugin({
             find: "!1,hideSimpleEmbedContent",
             replacement: {
                 match: /(let{toAST:.{0,125}?)\\(null!=\\i\\?\\i:\\i\\).content/,
-                replace: "const idTranslaterContent=$self.modifyIncomingMessage(arguments[2]?.contentMessage??arguments[1]);$1idTranslaterContent"
+                replace: "const idTranslaterContent=$self.modifyIncomingMessage(arguments[2]?.contentMessage??arguments[1]);$1idTranslaterContent",
+                predicate: () => patchEnabled
             }
         }
     ],
 
     start() {
-        // Démarrer le plugin avec un délai de 5 secondes pour éviter les conflits
+        // Activer le patch après 5 secondes pour éviter les conflits avec d'autres plugins
         setTimeout(() => {
+            patchEnabled = true;
             console.log("[ID Translater] Plugin demarre - Conversion automatique des IDs activee");
         }, 5000);
     },
