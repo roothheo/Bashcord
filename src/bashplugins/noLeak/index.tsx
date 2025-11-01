@@ -100,7 +100,7 @@ function patchSettingsObject() {
 
         // Patch de la fonction getSetting pour intercepter les demandes
         const originalGetSetting = SettingsStore.getSetting;
-        SettingsStore.getSetting = function(section, key, defaultValue) {
+        SettingsStore.getSetting = function (section, key, defaultValue) {
             const result = originalGetSetting.call(this, section, key, defaultValue);
 
             // Intercepter les clés liées aux labels
