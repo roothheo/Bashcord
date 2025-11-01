@@ -216,7 +216,10 @@ export default definePlugin({
     ],
 
     start() {
-        console.log("[ID Translater] Plugin demarre - Conversion automatique des IDs activee");
+        // Démarrer le plugin avec un délai de 5 secondes pour éviter les conflits
+        setTimeout(() => {
+            console.log("[ID Translater] Plugin demarre - Conversion automatique des IDs activee");
+        }, 5000);
     },
 
     stop() {
