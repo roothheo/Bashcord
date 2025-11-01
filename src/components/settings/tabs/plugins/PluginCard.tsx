@@ -25,6 +25,7 @@ const cl = classNameFactory("vc-plugins-");
 // Avoid circular dependency
 const { startDependenciesRecursive, startPlugin, stopPlugin, isPluginEnabled } = proxyLazy(() => require("plugins") as typeof import("plugins"));
 
+
 interface PluginCardProps extends React.HTMLProps<HTMLDivElement> {
     plugin: Plugin;
     disabled?: boolean;
@@ -39,6 +40,7 @@ export function PluginCard({ plugin, disabled, onRestartNeeded, onMouseEnter, on
     const pluginMeta = PluginMeta[plugin.name];
     const isEquicordPlugin = pluginMeta.folderName.startsWith("src/equicordplugins/") ?? false;
     const isVencordPlugin = pluginMeta.folderName.startsWith("src/plugins/") ?? false;
+    const isBashcordPlugin = pluginMeta.folderName.startsWith("src/bashplugins/") ?? false;
     const isUserPlugin = pluginMeta.userPlugin ?? false;
     const isModifiedPlugin = plugin?.isModified ?? false;
 
@@ -99,36 +101,61 @@ export function PluginCard({ plugin, disabled, onRestartNeeded, onMouseEnter, on
             condition: isModifiedPlugin,
             src: "https://equicord.org/assets/icons/equicord/modified.png",
             alt: "Modified",
-            title: "Modified Vencord Plugin"
+            title: "Modified Vencord Plugin",
+            isSvg: false,
+            isComponent: false
         },
         {
             condition: isEquicordPlugin,
             src: "https://equicord.org/assets/icons/equicord/icon.png",
             alt: "Equicord",
-            title: "Equicord Plugin"
+            title: "Equicord Plugin",
+            isSvg: false,
+            isComponent: false
         },
         {
             condition: isVencordPlugin,
             src: "https://equicord.org/assets/icons/vencord/icon-light.png",
             alt: "Vencord",
-            title: "Vencord Plugin"
+            title: "Vencord Plugin",
+            isSvg: false,
+            isComponent: false
         },
         {
-            condition: isUserPlugin,
+            condition: isBashcordPlugin,
+            src: "https://bashcord.bashhheo.fr/assets/images/icon.png",
+            alt: "Bashcord",
+            title: "Bashcord Plugin",
+            isSvg: false,
+            isComponent: false
+        },
+        {
+            condition: isUserPlugin && !isBashcordPlugin,
             src: "https://equicord.org/assets/icons/misc/userplugin.png",
             alt: "User",
-            title: "User Plugin"
+            title: "User Plugin",
+            isSvg: false,
+            isComponent: false
         }
     ];
 
     const pluginDetails = pluginInfo.find(p => p.condition);
 
     const sourceBadge = pluginDetails ? (
-        <img
-            src={pluginDetails.src}
-            alt={pluginDetails.alt}
-            className={cl("source")}
-        />
+        pluginDetails.isSvg ? (
+            <img
+                src={pluginDetails.src!}
+                alt={pluginDetails.alt}
+                className={cl("source")}
+                style={{ width: "24px", height: "24px" }}
+            />
+        ) : (
+            <img
+                src={pluginDetails.src!}
+                alt={pluginDetails.alt}
+                className={cl("source")}
+            />
+        )
     ) : null;
 
     const tooltip = pluginDetails?.title || "Unknown Plugin";

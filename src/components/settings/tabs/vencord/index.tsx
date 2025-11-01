@@ -116,7 +116,7 @@ function EquicordSettings() {
         ];
 
     return (
-        <SettingsTab title="Equicord Settings">
+        <SettingsTab title="Bashcord Settings">
             {(isEquicordDonor(user?.id) || isVencordDonor(user?.id)) ? (
                 <SpecialCard
                     title="Donations"
@@ -134,17 +134,7 @@ function EquicordSettings() {
                 >
                     <DonateButtonComponent />
                 </SpecialCard>
-            ) : (
-                <SpecialCard
-                    title="Support the Project"
-                    description="Please consider supporting the development of Equicord by donating!"
-                    cardImage={donateImage}
-                    backgroundImage={DONOR_BACKGROUND_IMAGE}
-                    backgroundColor="#c3a3ce"
-                >
-                    <DonateButtonComponent />
-                </SpecialCard>
-            )}
+            ) : null}
             {isAnyPluginDev(user?.id) && (
                 <SpecialCard
                     title="Contributions"
@@ -311,7 +301,7 @@ function EquicordSettings() {
 
             <section
                 className={Margins.top16}
-                title="Equicord Notifications"
+                title="Bashcord Notifications"
             >
                 <Flex>
                     <Button onClick={openNotificationSettingsModal}>
@@ -341,7 +331,7 @@ function DonateButtonComponent() {
     );
 }
 
-export default wrapTab(EquicordSettings, "Equicord Settings");
+export default wrapTab(EquicordSettings, "Bashcord Settings");
 
 export function isEquicordDonor(userId: string): boolean {
     const donorBadges = BadgeAPI.getEquicordDonorBadges(userId);
