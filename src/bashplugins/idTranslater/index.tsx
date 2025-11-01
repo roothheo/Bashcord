@@ -217,15 +217,8 @@ export default definePlugin({
     modifyIncomingMessage,
     onBeforeMessageSend,
 
-    patches: [
-        {
-            find: "!1,hideSimpleEmbedContent",
-            replacement: {
-                match: /(let{toAST:.{0,125}?)\\(null!=\\i\\?\\i:\\i\\).content/,
-                replace: "const idTranslaterContent=$self.modifyIncomingMessage(arguments[2]?.contentMessage??arguments[1]);$1idTranslaterContent"
-            }
-        }
-    ],
+    // Patch temporairement désactivé - fonctionne via onBeforeMessageSend
+    patches: [],
 
     start() {
         console.log("[ID Translater] Plugin demarre - Conversion automatique des IDs activee");
