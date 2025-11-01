@@ -18,12 +18,12 @@ const settings = definePluginSettings({
     },
     translateChannelIds: {
         type: OptionType.BOOLEAN,
-        description: "Convertir les IDs de canaux en r?f?rences # cliquables",
+        description: "Convertir les IDs de canaux en références # cliquables",
         default: true
     },
     translateRoleIds: {
         type: OptionType.BOOLEAN,
-        description: "Convertir les IDs de r?les en mentions @& cliquables",
+        description: "Convertir les IDs de rôles en mentions @& cliquables",
         default: true
     },
     translateMessageIds: {
@@ -33,22 +33,22 @@ const settings = definePluginSettings({
     },
     minIdLength: {
         type: OptionType.NUMBER,
-        description: "Longueur minimale des IDs ? convertir (Discord: 17-19 chiffres)",
+        description: "Longueur minimale des IDs à convertir (Discord: 17-19 chiffres)",
         default: 17
     },
     maxIdLength: {
         type: OptionType.NUMBER,
-        description: "Longueur maximale des IDs ? convertir",
+        description: "Longueur maximale des IDs à convertir",
         default: 19
     }
 });
 
-// Regex pour d?tecter les IDs Discord (nombres de 17-19 chiffres g?n?ralement)
+// Regex pour détecter les IDs Discord (nombres de 17-19 chiffres généralement)
 function createIdRegex(minLength: number, maxLength: number): RegExp {
     return new RegExp(`\\b\\d{${minLength},${maxLength}}\\b`, "g");
 }
 
-// V?rifier si un ID correspond ? un utilisateur
+// Vérifier si un ID correspond à un utilisateur
 function isUserId(id: string): boolean {
     try {
         const user = UserStore.getUser(id);
@@ -58,7 +58,7 @@ function isUserId(id: string): boolean {
     }
 }
 
-// V?rifier si un ID correspond ? un canal
+// Vérifier si un ID correspond à un canal
 function isChannelId(id: string): boolean {
     try {
         const channel = ChannelStore.getChannel(id);
@@ -68,7 +68,7 @@ function isChannelId(id: string): boolean {
     }
 }
 
-// V?rifier si un ID correspond ? un r?le (via le canal actuel)
+// Vérifier si un ID correspond à un rôle (via le canal actuel)
 function isRoleId(id: string, channelId?: string): boolean {
     if (!channelId) return false;
     try {
@@ -78,20 +78,20 @@ function isRoleId(id: string, channelId?: string): boolean {
         const guild = GuildStore.getGuild(channel.guild_id);
         if (!guild) return false;
         
-        // V?rifier si le r?le existe dans le serveur
+        // Vérifier si le rôle existe dans le serveur
         return guild.roles?.[id] !== undefined;
     } catch {
         return false;
     }
 }
 
-// V?rifier si un ID est d?j? dans une mention Discord ou une URL
+// Vérifier si un ID est déjà dans une mention Discord ou une URL
 function isIdInContext(content: string, id: string, index: number): boolean {
-    // V?rifier le contexte avant l'ID
+    // Vérifier le contexte avant l'ID
     const beforeStart = Math.max(0, index - 5);
     const before = content.substring(beforeStart, index);
     
-    // V?rifier le contexte apr?s l'ID
+    // Vérifier le contexte après l'ID
     const afterEnd = Math.min(content.length, index + id.length + 5);
     const after = content.substring(index + id.length, afterEnd);
     
@@ -105,7 +105,7 @@ function isIdInContext(content: string, id: string, index: number): boolean {
         return true;
     }
     
-    // Ignorer si l'ID est pr?c?d? ou suivi par @ ou #
+    // Ignorer si l'ID est précédé ou suivi par @ ou #
     if (before.endsWith("@") || before.endsWith("#") || after.startsWith("@") || after.startsWith("#")) {
         return true;
     }
@@ -127,7 +127,7 @@ function translateIds(content: string, channelId?: string): string {
     let translatedContent = content;
     const processedIds = new Map<string, string>(); // ID -> replacement
 
-    // Trouver tous les IDs et d?terminer leurs remplacements
+    // Trouver tous les IDs et déterminer leurs remplacements
     let match;
     const idMatches: Array<{ id: string; index: number }> = [];
     
@@ -135,17 +135,17 @@ function translateIds(content: string, channelId?: string): string {
         const id = match[0];
         const index = match.index;
         
-        // V?rifier si l'ID est dans un contexte sp?cial
+        // Vérifier si l'ID est dans un contexte spécial
         if (isIdInContext(content, id, index)) {
             continue;
         }
         
-        // ?viter les doublons
+        // éviter les doublons
         if (processedIds.has(id)) {
             continue;
         }
         
-        // D?terminer le type d'ID et le remplacement appropri?
+        // Déterminer le type d'ID et le remplacement approprié
         let replacement: string | null = null;
         
         if (translateUserIds && isUserId(id)) {
@@ -155,7 +155,7 @@ function translateIds(content: string, channelId?: string): string {
         } else if (translateRoleIds && channelId && isRoleId(id, channelId)) {
             replacement = `<@&${id}>`;
         } else if (translateMessageIds && channelId) {
-            // Pour les messages, cr?er un lien Discord
+            // Pour les messages, créer un lien Discord
             const channel = ChannelStore.getChannel(channelId);
             if (channel?.guild_id) {
                 replacement = `https://discord.com/channels/${channel.guild_id}/${channelId}/${id}`;
@@ -171,7 +171,7 @@ function translateIds(content: string, channelId?: string): string {
         }
     }
     
-    // Remplacer les IDs de la fin vers le d?but pour pr?server les indices
+    // Remplacer les IDs de la fin vers le début pour préserver les indices
     idMatches.reverse().forEach(({ id, index }) => {
         const replacement = processedIds.get(id);
         if (replacement) {
@@ -186,8 +186,8 @@ function translateIds(content: string, channelId?: string): string {
 function modifyIncomingMessage(message: Message): string {
     if (!message.content) return message.content || "";
 
-    // Ne pas modifier les messages qui contiennent d?j? des mentions Discord
-    // pour ?viter les doublons (sauf si c'est juste un lien de message)
+    // Ne pas modifier les messages qui contiennent déjà des mentions Discord
+    // pour éviter les doublons (sauf si c'est juste un lien de message)
     if (message.content.includes("<@") || message.content.includes("<#")) {
         return message.content;
     }
@@ -199,7 +199,7 @@ function modifyIncomingMessage(message: Message): string {
 function onBeforeMessageSend(channelId: string, msg: { content: string }) {
     if (!msg.content) return;
 
-    // Ne pas modifier si le contenu contient d?j? des mentions
+    // Ne pas modifier si le contenu contient déjà des mentions
     if (msg.content.includes("<@") || msg.content.includes("<#")) {
         return;
     }
@@ -209,7 +209,7 @@ function onBeforeMessageSend(channelId: string, msg: { content: string }) {
 
 export default definePlugin({
     name: "ID Translater",
-    description: "Traduit automatiquement les IDs Discord en mentions @ ou r?f?rences # cliquables",
+    description: "Traduit automatiquement les IDs Discord en mentions @ ou références # cliquables",
     authors: [{ name: "Bash", id: 1327483363518582784n }],
     isModified: true,
 
