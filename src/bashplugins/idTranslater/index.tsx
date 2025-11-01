@@ -195,17 +195,6 @@ function modifyIncomingMessage(message: Message): string {
     return translateIds(message.content, message.channel_id);
 }
 
-// Fonction pour modifier les messages avant envoi
-function onBeforeMessageSend(channelId: string, msg: { content: string }) {
-    if (!msg.content) return;
-
-    // Ne pas modifier si le contenu contient déjà des mentions
-    if (msg.content.includes("<@") || msg.content.includes("<#")) {
-        return;
-    }
-
-    msg.content = translateIds(msg.content, channelId);
-}
 
 export default definePlugin({
     name: "ID Translater",
@@ -215,10 +204,16 @@ export default definePlugin({
 
     settings,
     modifyIncomingMessage,
-    onBeforeMessageSend,
 
-    // Patch temporairement désactivé - fonctionne via onBeforeMessageSend
-    patches: [],
+    patches: [
+        {
+            find: "!1,hideSimpleEmbedContent",
+            replacement: {
+                match: /(let{toAST:.{0,125}?)\\(null!=\\i\\?\\i:\\i\\).content/,
+                replace: "const idTranslaterContent=$self.modifyIncomingMessage(arguments[2]?.contentMessage??arguments[1]);$1idTranslaterContent"
+            }
+        }
+    ],
 
     start() {
         console.log("[ID Translater] Plugin demarre - Conversion automatique des IDs activee");
