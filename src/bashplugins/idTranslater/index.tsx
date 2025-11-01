@@ -31,6 +31,11 @@ const settings = definePluginSettings({
         description: "Convertir les IDs de messages en liens cliquables",
         default: false
     },
+    translateOwnMessages: {
+        type: OptionType.BOOLEAN,
+        description: "Traduire les IDs dans vos propres messages envoyés",
+        default: false
+    },
     minIdLength: {
         type: OptionType.NUMBER,
         description: "Longueur minimale des IDs ? convertir (Discord: 17-19 chiffres)",
@@ -186,6 +191,16 @@ function translateIds(content: string, channelId?: string): string {
 function modifyIncomingMessage(message: Message): string {
     if (!message.content) return message.content || "";
 
+    // Vérifier si le message vient de l'utilisateur actuel
+    const currentUser = UserStore.getCurrentUser();
+    const messageAuthor = message.author;
+    const isOwnMessage = currentUser?.id && messageAuthor?.id && messageAuthor.id === currentUser.id;
+
+    // Ne pas modifier les messages de l'utilisateur actuel sauf si l'option est activée
+    if (isOwnMessage && !settings.store.translateOwnMessages) {
+        return message.content;
+    }
+
     // Ne pas modifier les messages qui contiennent d?j? des mentions Discord
     // pour ?viter les doublons (sauf si c'est juste un lien de message)
     if (message.content.includes("<@") || message.content.includes("<#")) {
@@ -193,18 +208,6 @@ function modifyIncomingMessage(message: Message): string {
     }
 
     return translateIds(message.content, message.channel_id);
-}
-
-// Fonction pour modifier les messages avant envoi
-function onBeforeMessageSend(channelId: string, msg: { content: string; }) {
-    if (!msg.content) return;
-
-    // Ne pas modifier si le contenu contient d?j? des mentions
-    if (msg.content.includes("<@") || msg.content.includes("<#")) {
-        return;
-    }
-
-    msg.content = translateIds(msg.content, channelId);
 }
 
 export default definePlugin({
@@ -215,7 +218,6 @@ export default definePlugin({
 
     settings,
     modifyIncomingMessage,
-    onBeforeMessageSend,
 
     patches: [
         {
