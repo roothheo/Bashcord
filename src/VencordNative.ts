@@ -46,6 +46,8 @@ export default {
         update: () => invoke<IpcRes<boolean>>(IpcEvents.UPDATE),
         rebuild: () => invoke<IpcRes<boolean>>(IpcEvents.BUILD),
         getRepo: () => invoke<IpcRes<string>>(IpcEvents.GET_REPO),
+        fetchGitHubCommits: (repoSlug: string, fromHash: string, toHash: string) => 
+            invoke<IpcRes<Array<{ hash: string; author: string; message: string; timestamp?: number }>>>(IpcEvents.FETCH_GITHUB_COMMITS, repoSlug, fromHash, toHash),
     },
 
     settings: {

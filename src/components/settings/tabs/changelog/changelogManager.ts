@@ -9,6 +9,10 @@ import { DataStore } from "@api/index";
 import gitHash from "~git-hash";
 import plugins from "~plugins";
 
+// Pour accéder à VencordNative depuis le navigateur
+declare const VencordNative: typeof import("@VencordNative").default;
+declare const IS_WEB: boolean;
+
 export interface ChangelogEntry {
     hash: string;
     author: string;
@@ -58,7 +62,26 @@ async function fetchCommitsBetween(
     fromHash: string,
     toHash: string,
 ): Promise<ChangelogEntry[]> {
-    if (!repoSlug || typeof fetch !== "function") return [];
+    if (!repoSlug) return [];
+    
+    // Utiliser l'IPC pour éviter les problèmes CORS depuis le navigateur
+    if (!IS_WEB && typeof VencordNative !== "undefined" && VencordNative.updater.fetchGitHubCommits) {
+        try {
+            const result = await VencordNative.updater.fetchGitHubCommits(repoSlug, fromHash, toHash);
+            if (result.ok) {
+                return result.value as ChangelogEntry[];
+            } else {
+                console.warn("Failed to fetch commits via IPC", result.error);
+                return [];
+            }
+        } catch (err) {
+            console.warn("Failed to fetch commits between hashes", err);
+            return [];
+        }
+    }
+    
+    // Fallback pour la version web (peut échouer à cause de CORS)
+    if (typeof fetch !== "function") return [];
     try {
         const res = await fetch(
             `${GITHUB_COMPARE_ENDPOINT}/${repoSlug}/compare/${fromHash}...${toHash}`,

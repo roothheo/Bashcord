@@ -49,4 +49,5 @@ export const enum IpcEvents {
 
     OPEN_THEMES_FOLDER = "VencordOpenThemesFolder",
     OPEN_SETTINGS_FOLDER = "VencordOpenSettingsFolder",
+    FETCH_GITHUB_COMMITS = "VencordFetchGitHubCommits",
 }

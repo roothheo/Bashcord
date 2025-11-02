@@ -106,8 +106,46 @@ async function applyUpdates() {
     return true;
 }
 
+// Handler pour récupérer les commits GitHub (pour éviter CORS depuis le navigateur)
+async function fetchGitHubCommits(repoSlug: string, fromHash: string, toHash: string) {
+    try {
+        const url = `https://api.github.com/repos/${repoSlug}/compare/${fromHash}...${toHash}`;
+        const data = await fetchJson<any>(url, {
+            headers: {
+                Accept: "application/vnd.github+json",
+                "User-Agent": VENCORD_USER_AGENT
+            }
+        });
+
+        if (!data || !Array.isArray(data.commits)) return [];
+
+        return data.commits.map((commit: any) => {
+            const message: string = commit?.commit?.message ?? "";
+            const summary = message.split("\n")[0] || "No message";
+            const authorName =
+                commit?.commit?.author?.name ||
+                commit?.author?.login ||
+                "Unknown";
+            const timestamp = commit?.commit?.author?.date
+                ? Date.parse(commit.commit.author.date)
+                : undefined;
+
+            return {
+                hash: commit?.sha || "",
+                author: authorName,
+                message: summary,
+                timestamp: Number.isNaN(timestamp) ? undefined : timestamp,
+            };
+        });
+    } catch (err) {
+        UpdateLogger.error("Failed to fetch GitHub commits", err);
+        throw err;
+    }
+}
+
 // Retourner toujours le repo Bashcord pour les utilisateurs standalone
 ipcMain.handle(IpcEvents.GET_REPO, serializeErrors(() => `https://github.com/${BASHCORD_REPO}`));
 ipcMain.handle(IpcEvents.GET_UPDATES, serializeErrors(calculateGitChanges));
 ipcMain.handle(IpcEvents.UPDATE, serializeErrors(fetchUpdates));
 ipcMain.handle(IpcEvents.BUILD, serializeErrors(applyUpdates));
+ipcMain.handle(IpcEvents.FETCH_GITHUB_COMMITS, serializeErrors((repoSlug: string, fromHash: string, toHash: string) => fetchGitHubCommits(repoSlug, fromHash, toHash)));

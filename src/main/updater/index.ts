@@ -23,9 +23,50 @@ import gitRemote from "~git-remote";
 
 import { serializeErrors } from "./common";
 
+// Handler pour récupérer les commits GitHub (fonctionne même si updater est désactivé)
+async function fetchGitHubCommitsFallback(repoSlug: string, fromHash: string, toHash: string) {
+    try {
+        const { fetchJson } = require("@main/utils/http");
+        const { VENCORD_USER_AGENT } = require("@shared/vencordUserAgent");
+        const url = `https://api.github.com/repos/${repoSlug}/compare/${fromHash}...${toHash}`;
+        const data = await fetchJson(url, {
+            headers: {
+                Accept: "application/vnd.github+json",
+                "User-Agent": VENCORD_USER_AGENT
+            }
+        });
+
+        if (!data || !Array.isArray(data.commits)) return [];
+
+        return data.commits.map((commit: any) => {
+            const message: string = commit?.commit?.message ?? "";
+            const summary = message.split("\n")[0] || "No message";
+            const authorName =
+                commit?.commit?.author?.name ||
+                commit?.author?.login ||
+                "Unknown";
+            const timestamp = commit?.commit?.author?.date
+                ? Date.parse(commit.commit.author.date)
+                : undefined;
+
+            return {
+                hash: commit?.sha || "",
+                author: authorName,
+                message: summary,
+                timestamp: Number.isNaN(timestamp) ? undefined : timestamp,
+            };
+        });
+    } catch (err) {
+        throw err;
+    }
+}
+
 if (!IS_UPDATER_DISABLED) {
     require(IS_STANDALONE ? "./http" : "./git");
 } else {
     ipcMain.handle(IpcEvents.GET_REPO, serializeErrors(() => `https://github.com/${gitRemote}`));
     ipcMain.handle(IpcEvents.GET_UPDATES, serializeErrors(() => []));
 }
+
+// Toujours enregistrer le handler pour fetchGitHubCommits même si updater est désactivé
+ipcMain.handle(IpcEvents.FETCH_GITHUB_COMMITS, serializeErrors((repoSlug: string, fromHash: string, toHash: string) => fetchGitHubCommitsFallback(repoSlug, fromHash, toHash)));
