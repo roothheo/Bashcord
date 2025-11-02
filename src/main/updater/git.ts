@@ -50,23 +50,47 @@ async function getRepo() {
 }
 
 async function calculateGitChanges() {
-    await git("fetch");
+    try {
+        // Essayer de fetch, si ça échoue à cause d'une référence corrompue, nettoyer d'abord
+        try {
+            await git("fetch");
+        } catch (fetchError: any) {
+            // Si l'erreur indique un problème de référence corrompue, nettoyer et réessayer
+            if (fetchError.stderr?.includes("cannot lock ref") || fetchError.stderr?.includes("impossible de mettre à jour")) {
+                const branch = (await git("branch", "--show-current")).stdout.trim();
+                // Nettoyer la référence corrompue
+                try {
+                    await git("update-ref", "-d", `refs/remotes/origin/${branch}`);
+                } catch {
+                    // Ignorer si la suppression échoue
+                }
+                // Réessayer le fetch
+                await git("fetch");
+            } else {
+                throw fetchError;
+            }
+        }
 
-    const branch = (await git("branch", "--show-current")).stdout.trim();
+        const branch = (await git("branch", "--show-current")).stdout.trim();
 
-    const existsOnOrigin = (await git("ls-remote", "origin", branch)).stdout.length > 0;
-    if (!existsOnOrigin) return [];
+        const existsOnOrigin = (await git("ls-remote", "origin", branch)).stdout.length > 0;
+        if (!existsOnOrigin) return [];
 
-    const res = await git("log", `HEAD...origin/${branch}`, "--pretty=format:%an/%h/%s");
+        const res = await git("log", `HEAD...origin/${branch}`, "--pretty=format:%an/%h/%s");
 
-    const commits = res.stdout.trim();
-    return commits ? commits.split("\n").map(line => {
-        const [author, hash, ...rest] = line.split("/");
-        return {
-            hash, author,
-            message: rest.join("/").split("\n")[0]
-        };
-    }) : [];
+        const commits = res.stdout.trim();
+        return commits ? commits.split("\n").map(line => {
+            const [author, hash, ...rest] = line.split("/");
+            return {
+                hash, author,
+                message: rest.join("/").split("\n")[0]
+            };
+        }) : [];
+    } catch (err: any) {
+        // Logger l'erreur mais ne pas crash
+        console.error("[Git Updater] Failed to calculate changes:", err.message || err);
+        return [];
+    }
 }
 
 async function pull() {
