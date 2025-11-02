@@ -74,16 +74,6 @@ async function calculateGitChanges() {
 async function fetchUpdates() {
     const data = await githubGet("/releases/latest");
 
-    // Vérifier si une mise à jour est disponible
-    // Le nom de la release peut contenir un hash ou une version
-    const releaseName = data.name || "";
-    const releaseHash = releaseName.slice(releaseName.lastIndexOf(" ") + 1);
-    
-    // Si le hash est présent dans le nom et correspond au hash actuel, pas de mise à jour
-    if (releaseHash && releaseHash.length >= 7 && releaseHash === gitHash) {
-        return false;
-    }
-
     // Chercher le fichier ASAR dans les assets
     const asset = data.assets.find(a => a.name === ASAR_FILE);
     if (!asset) {
@@ -91,6 +81,63 @@ async function fetchUpdates() {
         return false;
     }
 
+    // Vérifier si une mise à jour est disponible
+    // Pour les standalone, on compare le hash Git actuel avec celui de la release
+    // Le nom ou le tag de la release peut contenir un hash Git
+    const releaseName = data.name || "";
+    const releaseTag = data.tag_name || "";
+    
+    // Extraire le hash du nom ou du tag (peut être en fin de chaîne après un espace ou dans le tag)
+    // Format attendu : "Release Name abc1234" ou tag "abc1234" ou "v1.0.0-abc1234"
+    let releaseHash = "";
+    
+    // D'abord essayer d'extraire du nom (dernier mot après un espace)
+    const nameParts = releaseName.trim().split(/\s+/);
+    if (nameParts.length > 0) {
+        const lastPart = nameParts[nameParts.length - 1];
+        // Si le dernier mot fait au moins 7 caractères et contient seulement des caractères hexadécimaux, c'est probablement un hash
+        if (lastPart.length >= 7 && /^[0-9a-f]+$/i.test(lastPart)) {
+            releaseHash = lastPart;
+        }
+    }
+    
+    // Si pas trouvé dans le nom, essayer le tag
+    if (!releaseHash && releaseTag) {
+        // Le tag peut être juste le hash, ou au format "v1.0.0-abc1234"
+        const tagParts = releaseTag.split("-");
+        const lastTagPart = tagParts[tagParts.length - 1];
+        if (lastTagPart.length >= 7 && /^[0-9a-f]+$/i.test(lastTagPart)) {
+            releaseHash = lastTagPart;
+        } else if (releaseTag.length >= 7 && /^[0-9a-f]+$/i.test(releaseTag)) {
+            releaseHash = releaseTag;
+        }
+    }
+    
+    // Si on a trouvé un hash valide, comparer avec le hash actuel
+    if (releaseHash && releaseHash.length >= 7) {
+        // Comparer les 7 premiers caractères du hash (format court standard)
+        const currentHashShort = gitHash.slice(0, 7);
+        const releaseHashShort = releaseHash.slice(0, 7);
+        
+        if (releaseHashShort.toLowerCase() === currentHashShort.toLowerCase()) {
+            UpdateLogger.info(`Already on latest version (hash match: ${currentHashShort}), no update needed`);
+            return false;
+        }
+        
+        // Vérifier aussi le hash complet au cas où (hash complet de 40 caractères)
+        if (releaseHash.length >= 40 && gitHash.toLowerCase().startsWith(releaseHashShort.toLowerCase())) {
+            UpdateLogger.info(`Already on latest version (full hash match), no update needed`);
+            return false;
+        }
+        
+        UpdateLogger.info(`Update available: current=${currentHashShort}, release=${releaseHashShort}`);
+    } else {
+        // Si on ne peut pas déterminer le hash de la release, on ne peut pas comparer
+        // Dans ce cas, on assume qu'il y a une mise à jour pour être sûr
+        // (mieux vaut mettre à jour inutilement que ne pas mettre à jour quand il faut)
+        UpdateLogger.warn(`Could not extract hash from release (name: "${releaseName}", tag: "${releaseTag}"), assuming update available`);
+    }
+    
     PendingUpdate = asset.browser_download_url;
     return true;
 }
