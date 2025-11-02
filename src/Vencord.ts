@@ -169,11 +169,7 @@ async function runUpdateCheck() {
     try {
         const isOutdated = await checkForUpdates();
         if (!isOutdated) {
-            // Si pas de mise à jour, enregistrer le hash actuel comme "dernière version vérifiée"
-            // Cela évite les boucles si la release ne contient pas de hash valide
-            if (IS_STANDALONE) {
-                localStorage.setItem("bashcord-last-checked-hash", shortGitHash(7));
-            }
+            // Si pas de mise à jour, la comparaison par timestamp a déjà été faite dans checkForUpdates
             return;
         }
 
@@ -187,11 +183,23 @@ async function runUpdateCheck() {
             UpdateLogger.info("Bashcord updated successfully, restarting...");
             // Enregistrer le timestamp de la mise à jour pour éviter les boucles
             localStorage.setItem("bashcord-last-update-time", now.toString());
-            // Enregistrer le hash de la release comme dernière version installée
+            // Enregistrer le timestamp de la release comme dernière version installée
             if (IS_STANDALONE && changes.length > 0) {
-                const releaseHash = changes[0].hash;
-                if (releaseHash && releaseHash.length >= 7) {
-                    localStorage.setItem("bashcord-last-installed-hash", releaseHash.slice(0, 7));
+                const releaseTimestamp = changes[0].hash; // Contient maintenant le timestamp published_at
+                if (releaseTimestamp) {
+                    let releaseTime: number;
+                    try {
+                        releaseTime = new Date(releaseTimestamp).getTime();
+                        if (isNaN(releaseTime)) {
+                            releaseTime = parseInt(releaseTimestamp, 10);
+                        }
+                    } catch {
+                        releaseTime = parseInt(releaseTimestamp, 10);
+                    }
+                    if (!isNaN(releaseTime) && releaseTime > 0) {
+                        localStorage.setItem("bashcord-last-installed-timestamp", releaseTime.toString());
+                        UpdateLogger.info(`Stored release timestamp: ${new Date(releaseTime).toISOString()}`);
+                    }
                 }
             }
             

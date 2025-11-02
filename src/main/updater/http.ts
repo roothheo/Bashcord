@@ -52,19 +52,19 @@ async function calculateGitChanges() {
     const isOutdated = await fetchUpdates();
     if (!isOutdated) return [];
 
-    // Pour les utilisateurs standalone, on ne peut pas comparer avec git
-    // On retourne simplement une liste avec un message générique indiquant qu'une mise à jour est disponible
+    // Pour les utilisateurs standalone, on retourne les infos de la release
+    // Le timestamp sera utilisé pour la comparaison côté renderer
     try {
         const release = await githubGet("/releases/latest");
         return [{
-            hash: release.tag_name || "latest",
+            hash: release.published_at || release.tag_name || "latest",
             author: "Bashcord",
-            message: release.name || "New Bashcord update available"
+            message: release.name || `New Bashcord update available (${release.tag_name || "latest"})`
         }];
     } catch (err) {
         // Fallback si la récupération de la release échoue
         return [{
-            hash: "unknown",
+            hash: Date.now().toString(),
             author: "Bashcord",
             message: "Update available"
         }];
@@ -81,61 +81,17 @@ async function fetchUpdates() {
         return false;
     }
 
-    // Vérifier si une mise à jour est disponible
-    // Pour les standalone, on compare le hash Git actuel avec celui de la release
-    // Le nom ou le tag de la release peut contenir un hash Git
-    const releaseName = data.name || "";
-    const releaseTag = data.tag_name || "";
-    
-    // Extraire le hash du nom ou du tag (peut être en fin de chaîne après un espace ou dans le tag)
-    // Format attendu : "Release Name abc1234" ou tag "abc1234" ou "v1.0.0-abc1234"
-    let releaseHash = "";
-    
-    // D'abord essayer d'extraire du nom (dernier mot après un espace)
-    const nameParts = releaseName.trim().split(/\s+/);
-    if (nameParts.length > 0) {
-        const lastPart = nameParts[nameParts.length - 1];
-        // Si le dernier mot fait au moins 7 caractères et contient seulement des caractères hexadécimaux, c'est probablement un hash
-        if (lastPart.length >= 7 && /^[0-9a-f]+$/i.test(lastPart)) {
-            releaseHash = lastPart;
-        }
-    }
-    
-    // Si pas trouvé dans le nom, essayer le tag
-    if (!releaseHash && releaseTag) {
-        // Le tag peut être juste le hash, ou au format "v1.0.0-abc1234"
-        const tagParts = releaseTag.split("-");
-        const lastTagPart = tagParts[tagParts.length - 1];
-        if (lastTagPart.length >= 7 && /^[0-9a-f]+$/i.test(lastTagPart)) {
-            releaseHash = lastTagPart;
-        } else if (releaseTag.length >= 7 && /^[0-9a-f]+$/i.test(releaseTag)) {
-            releaseHash = releaseTag;
-        }
-    }
-    
-    // Pour les standalone, le hash Git compilé dans l'ASAR ne change pas après une mise à jour.
-    // On ne peut donc pas comparer directement le hash du build avec celui de la release.
-    // La comparaison sera faite côté renderer avec localStorage.
-    // Ici, on retourne simplement si une release avec ASAR est disponible.
-    
-    // Si on a trouvé un hash valide dans la release, on le retourne pour comparaison côté renderer
-    if (releaseHash && releaseHash.length >= 7) {
-        const releaseHashShort = releaseHash.slice(0, 7);
-        const currentHashShort = gitHash.slice(0, 7);
-        
-        // Comparer quand même avec le hash du build (au cas où c'est la première fois)
-        // Mais ce ne sera pas fiable après la première mise à jour
-        if (releaseHashShort.toLowerCase() === currentHashShort.toLowerCase()) {
-            UpdateLogger.info(`Already on latest version (initial hash match: ${currentHashShort}), no update needed`);
-            return false;
-        }
-        
-        UpdateLogger.info(`Release hash found: ${releaseHashShort}, current build hash: ${currentHashShort}`);
-    } else {
-        // Si on ne peut pas déterminer le hash de la release, on ne déclenche PAS de mise à jour pour éviter les boucles
-        UpdateLogger.warn(`Could not extract hash from release (name: "${releaseName}", tag: "${releaseTag}"), skipping update to prevent loop`);
+    // Utiliser les timestamps pour comparer les versions (plus simple et fiable)
+    // La release GitHub a un champ published_at qui indique quand elle a été publiée
+    const releasePublishedAt = data.published_at;
+    if (!releasePublishedAt) {
+        UpdateLogger.warn("Release has no published_at timestamp, skipping update to prevent loop");
         return false;
     }
+
+    // Le timestamp sera comparé côté renderer avec localStorage
+    // Ici, on retourne simplement si une release avec ASAR est disponible
+    UpdateLogger.info(`Release found: ${data.name || data.tag_name} published at ${releasePublishedAt}`);
     
     PendingUpdate = asset.browser_download_url;
     return true;

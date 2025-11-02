@@ -1,0 +1,93 @@
+Logger.ts:40  Equicord   PluginManager  Starting plugins (stage Init)
+Logger.ts:40  Equicord   PluginManager  Starting plugin NoTrack
+Logger.ts:40  Equicord   PluginManager  Starting plugin ConsoleJanitor
+Logger.ts:40  Equicord   PluginManager  Starting plugin ConsoleShortcuts
+VM447 app:1 [FAST CONNECT] wss://gateway.discord.gg/?encoding=etf&v=9&compress=zstd-stream, encoding: etf, version: 9
+Logger.ts:40  Equicord   NoTrack  Disabling Sentry by erroring its WebpackInstance
+noTrack.ts:124 Uncaught Error: Sentry successfully disabled
+    at a.set (noTrack.ts:129:23)
+    at sentry.7432fe7269fb27bd.js:453:37877
+    at sentry.7432fe7269fb27bd.js:453:38422
+VM447 app:1 [FAST CONNECT] connected in 209ms
+Logger.ts:40  Equicord   WebpackPatcher  Main WebpackInstance found in web.11e4da6ed4f2ff17.js, initializing internal references to WebpackRequire
+Logger.ts:40  Equicord   WebpackPatcher  Found Webpack module factories in web.11e4da6ed4f2ff17.js
+Logger.ts:40  Equicord   PluginManager  Starting plugins (stage DOMContentLoaded)
+web.11e4da6ed4f2ff17.js:12 [libdiscore] [experiment_manager] Loaded experiments from cache
+web.11e4da6ed4f2ff17.js:12 [KvStore] GuildStore initialized in mode: typescript
+web.11e4da6ed4f2ff17.js:12 [KkvStore] GuildRoleStore initialized in mode: typescript
+Logger.ts:40  Equicord   WebpackPatcher  Patch by Experiments had no effect (Module id is 435064): /\i\.isStaff\(\)/
+_log @ Logger.ts:40
+VM250 C:\Users\ISP\AppData\Local\DiscordCanary\app-1.0.752\modules\discord_desktop_core-1\discord_desktop_core\core.asar\app\node_modules\@sentry\utils\cjs\instrument\console.js:38 Initializing voice engine with audio subsystem: experimental
+VM250 C:\Users\ISP\AppData\Local\DiscordCanary\app-1.0.752\modules\discord_desktop_core-1\discord_desktop_core\core.asar\app\node_modules\@sentry\utils\cjs\instrument\console.js:38 service release channel: canary
+Logger.ts:40  Equicord   WebpackPatcher  Patch by NoTrack had no effect (Module id is 771784): /this\._intervalId=/
+_log @ Logger.ts:40
+Logger.ts:40  Equicord   WebpackPatcher  Patch by NoTrack had no effect (Module id is 771784): /(?:increment|distribution)\(\i(?:,\i)?\){/g
+_log @ Logger.ts:40
+web.11e4da6ed4f2ff17.js:12 [KkvStore] RawGuildEmojiStore initialized in mode: typescript
+web.11e4da6ed4f2ff17.js:12 [KkvStore] GuildStickersStore initialized in mode: typescript
+web.11e4da6ed4f2ff17.js:12 [KkvStore] StickersPackStore initialized in mode: typescript
+web.11e4da6ed4f2ff17.js:12 [default] [BUILD INFO] Release Channel: canary, Build Number: 464263, Version Hash: f63725b20501f0e767805c4804c39afdc108e35a
+web.11e4da6ed4f2ff17.js:12 [KvStore] NoteStore initialized in mode: typescript
+web.11e4da6ed4f2ff17.js:12 [default] [NATIVE INFO] host 1.0.752, modules: discord_notifications: 1, discord_utils: 2, discord_spellcheck: 1, discord_krisp: 1, discord_desktop_overlay: 1, discord_overlay2: 1, discord_rpc: 1, discord_modules: 1, discord_dispatch: 1, discord_cloudsync: 1, discord_erlpack: 1, discord_zstd: 1, discord_desktop_core: 1, discord_game_utils: 1, discord_voice: 1, discord_media: 1, build: 71383
+web.11e4da6ed4f2ff17.js:12 [libdiscore] The answer for life the universe and everything is: 42
+web.11e4da6ed4f2ff17.js:12 [Spellchecker] Switching to fr-FR (available)
+Logger.ts:40  Equicord   WebpackPatcher  Patch by EquicordHelper had no effect (Module id is 67287): /\i\.\i\.isDeveloper/
+_log @ Logger.ts:40
+web.11e4da6ed4f2ff17.js:12 [KeybindsStore] Default overlay keybind is unsupported Object
+web.11e4da6ed4f2ff17.js:12 [KeybindsStore] Default overlay keybind is unsupported Object
+web.11e4da6ed4f2ff17.js:12 [GatewaySocket] [CONNECT] wss://gateway.discord.gg, encoding: etf, version: 9, compression: zstd-stream
+web.11e4da6ed4f2ff17.js:12 [GatewaySocket] [FAST CONNECT] successfully took over websocket, state: Object
+web.11e4da6ed4f2ff17.js:12 [GatewaySocket] [CONNECTED] wss://gateway.discord.gg/?encoding=etf&v=9&compress=zstd-stream in 1 ms
+VM24 node:events:497 Uncaught Error: listen EADDRINUSE: address already in use 127.0.0.1:6463
+    at Server.setupListenHandle [as _listen2] (VM91 node:net:1940:16)
+    at listenInCluster (VM91 node:net:1997:12)
+    at VM91 node:net:2206:7
+    at process.processTicksAndRejections (VM32 task_queues:90:21)
+web.11e4da6ed4f2ff17.js:12 [RPCServer:IPC] Starting on \\?\pipe\discord-ipc-1
+web.11e4da6ed4f2ff17.js:12 [GatewaySocket] [READY] took 1270ms, as afa5a4e5513a115ce001a2d553b16d76
+web.11e4da6ed4f2ff17.js:12 [Flux] Dispatching CONNECTION_OPEN
+web.11e4da6ed4f2ff17.js:12 [DatabaseManager] removing database (user: 1426996694792409219, database: undefined)
+VM250 C:\Users\ISP\AppData\Local\DiscordCanary\app-1.0.752\modules\discord_desktop_core-1\discord_desktop_core\core.asar\app\node_modules\@sentry\utils\cjs\instrument\console.js:38 Deferring audio subsystem switch to experimental until next restart.
+web.11e4da6ed4f2ff17.js:12 [OverlayRenderStore] setOverlayEnabled: supported Object
+web.11e4da6ed4f2ff17.js:12 [OverlayRenderStore] setOverlayEnabled Object
+web.11e4da6ed4f2ff17.js:12 [OverlayRenderStore] Legacy change
+web.11e4da6ed4f2ff17.js:12 [OverlayRenderStore] OOP change
+web.11e4da6ed4f2ff17.js:12 [KeybindsStore] Default overlay keybind is unsupported Object
+Logger.ts:40  Equicord   PluginManager  Starting plugins (stage WebpackReady)
+Logger.ts:40  Equicord   PluginManager  Starting plugin BadgeAPI
+Logger.ts:40  Equicord   PluginManager  Starting plugin Experiments
+Logger.ts:40  Equicord   PluginManager  Starting plugin MessageLogger
+Logger.ts:40  Equicord   PluginManager  Starting plugin PlatformIndicators
+Logger.ts:40  Equicord   PluginManager  Starting plugin AntiDéconnexion
+index.ts:168 [AntiDéco] Plugin AntiDéconnexion initialisé
+Logger.ts:40  Equicord   PluginManager  Starting plugin FakeDeafen
+Logger.ts:40  Equicord   PluginManager  Starting plugin AllCallTimers
+Logger.ts:40  Equicord   PluginManager  Starting plugin MessageLoggerEnhanced
+Logger.ts:40  Equicord   PluginManager  Starting plugin VCSupport
+web.11e4da6ed4f2ff17.js:12 [GatewaySocket] [READY_SUPPLEMENTAL] took 2023ms
+Logger.ts:40  Equicord   Updater  Failed to check or install updates ReferenceError: gitHash is not defined
+    at fve (Vencord.ts:175:68)
+_log @ Logger.ts:40
+web.11e4da6ed4f2ff17.js:12 [RPCServer:WSS] Starting on 6464
+web.11e4da6ed4f2ff17.js:12 [OverlayRenderStore] Retracking 0 games (0 already tracked)
+web.11e4da6ed4f2ff17.js:12 [OverlayRenderStore] Retracked 0 games
+web.11e4da6ed4f2ff17.js:12 [OverlayV3NativeModule] Loading Out of Process Overlay Module
+web.11e4da6ed4f2ff17.js:12 [OverlayKeybindExperimentManager] Experiments initializing...
+web.11e4da6ed4f2ff17.js:12 [OverlayKeybindExperimentManager] Experiments initialized
+web.11e4da6ed4f2ff17.js:12 [OverlayV3NativeModule] OverlayV3 Module Loaded
+Vencord.ts:238 🎉 Bashcord: Checking welcome popup... Object
+Vencord.ts:245 🎉 Bashcord: Welcome popup already shown, skipping...
+web.11e4da6ed4f2ff17.js:12 [KeybindsStore] Default overlay keybind is unsupported Object
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+web.11e4da6ed4f2ff17.js:12 [libdiscore] [BlockedDomainsStore] Successfully fetched blocked domains

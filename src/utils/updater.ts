@@ -52,29 +52,44 @@ export async function checkForUpdates() {
             return (isOutdated = false);
         }
     } else {
-        // Pour les standalone, vérifier si le hash de la release correspond à celui déjà installé
-        // Le hash du build ne change pas après une mise à jour, donc on utilise localStorage
+        // Pour les standalone, utiliser les timestamps pour comparer les versions
+        // Plus simple et fiable que les hashes Git
         if (changes.length > 0) {
-            const releaseHash = changes[0].hash;
-            if (releaseHash && releaseHash.length >= 7) {
-                const releaseHashShort = releaseHash.slice(0, 7);
-                const lastInstalledHash = localStorage.getItem("bashcord-last-installed-hash");
-                const lastCheckedHash = localStorage.getItem("bashcord-last-checked-hash");
-                
-                // Comparer avec le dernier hash installé (priorité) ou le dernier hash vérifié
-                const hashToCompare = lastInstalledHash || lastCheckedHash || gitHash.slice(0, 7);
-                
-                if (releaseHashShort.toLowerCase() === hashToCompare.toLowerCase()) {
-                    UpdateLogger.info(`Already on latest version (installed hash: ${hashToCompare}), no update needed`);
-                    return (isOutdated = false);
+            const releaseTimestamp = changes[0].hash; // Le hash contient maintenant le timestamp published_at
+            if (releaseTimestamp) {
+                // Parser le timestamp ISO ou utiliser directement si c'est un timestamp
+                let releaseTime: number;
+                try {
+                    // Essayer de parser comme ISO date string
+                    releaseTime = new Date(releaseTimestamp).getTime();
+                    if (isNaN(releaseTime)) {
+                        // Si ce n'est pas une date valide, essayer comme timestamp numérique
+                        releaseTime = parseInt(releaseTimestamp, 10);
+                    }
+                } catch {
+                    releaseTime = parseInt(releaseTimestamp, 10);
                 }
                 
-                // Si le hash de la release correspond au hash du build actuel et qu'on n'a pas de hash installé,
-                // c'est probablement la première vérification et on est à jour
-                if (!lastInstalledHash && releaseHashShort.toLowerCase() === gitHash.slice(0, 7).toLowerCase()) {
-                    UpdateLogger.info(`Already on latest version (build hash match: ${gitHash.slice(0, 7)}), no update needed`);
-                    localStorage.setItem("bashcord-last-checked-hash", releaseHashShort);
-                    return (isOutdated = false);
+                if (!isNaN(releaseTime) && releaseTime > 0) {
+                    const lastInstalledTimestamp = localStorage.getItem("bashcord-last-installed-timestamp");
+                    
+                    if (lastInstalledTimestamp) {
+                        const lastInstalledTime = parseInt(lastInstalledTimestamp, 10);
+                        if (!isNaN(lastInstalledTime) && releaseTime <= lastInstalledTime) {
+                            UpdateLogger.info(`Already on latest version (installed: ${new Date(lastInstalledTime).toISOString()}, release: ${new Date(releaseTime).toISOString()}), no update needed`);
+                            return (isOutdated = false);
+                        }
+                    } else {
+                        // Première vérification : on est probablement à jour si le timestamp est très récent
+                        // (moins d'1 heure = probablement la même release qu'on vient d'installer)
+                        const now = Date.now();
+                        const timeDiff = Math.abs(now - releaseTime);
+                        if (timeDiff < 60 * 60 * 1000) { // 1 heure
+                            UpdateLogger.info(`First check: release timestamp is recent (${Math.round(timeDiff / 1000 / 60)} minutes old), assuming up-to-date`);
+                            localStorage.setItem("bashcord-last-installed-timestamp", releaseTime.toString());
+                            return (isOutdated = false);
+                        }
+                    }
                 }
             }
         }
