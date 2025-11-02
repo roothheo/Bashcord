@@ -59,7 +59,7 @@ import { patches, PMLogger, startAllPlugins } from "./plugins";
 import { localStorage } from "./utils/localStorage";
 import { relaunch } from "./utils/native";
 import { getCloudSettings, putCloudSettings } from "./utils/settingsSync";
-import { checkForUpdates, update, UpdateLogger } from "./utils/updater";
+import { changes, checkForUpdates, update, UpdateLogger } from "./utils/updater";
 import { onceReady } from "./webpack";
 import { SettingsRouter } from "./webpack/common";
 
