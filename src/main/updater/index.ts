@@ -16,7 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { fetchJson } from "@main/utils/http";
 import { IpcEvents } from "@shared/IpcEvents";
+import { VENCORD_USER_AGENT } from "@shared/vencordUserAgent";
 import { ipcMain } from "electron";
 
 import gitRemote from "~git-remote";
@@ -26,10 +28,8 @@ import { serializeErrors } from "./common";
 // Handler pour récupérer les commits GitHub (fonctionne même si updater est désactivé)
 async function fetchGitHubCommitsFallback(repoSlug: string, fromHash: string, toHash: string) {
     try {
-        const { fetchJson } = require("@main/utils/http");
-        const { VENCORD_USER_AGENT } = require("@shared/vencordUserAgent");
         const url = `https://api.github.com/repos/${repoSlug}/compare/${fromHash}...${toHash}`;
-        const data = await fetchJson(url, {
+        const data = await fetchJson<any>(url, {
             headers: {
                 Accept: "application/vnd.github+json",
                 "User-Agent": VENCORD_USER_AGENT
@@ -63,10 +63,10 @@ async function fetchGitHubCommitsFallback(repoSlug: string, fromHash: string, to
 
 if (!IS_UPDATER_DISABLED) {
     require(IS_STANDALONE ? "./http" : "./git");
+    // git.ts et http.ts enregistrent déjà FETCH_GITHUB_COMMITS
 } else {
     ipcMain.handle(IpcEvents.GET_REPO, serializeErrors(() => `https://github.com/${gitRemote}`));
     ipcMain.handle(IpcEvents.GET_UPDATES, serializeErrors(() => []));
+    // Enregistrer le handler pour fetchGitHubCommits seulement si updater est désactivé
+    ipcMain.handle(IpcEvents.FETCH_GITHUB_COMMITS, serializeErrors((repoSlug: string, fromHash: string, toHash: string) => fetchGitHubCommitsFallback(repoSlug, fromHash, toHash)));
 }
-
-// Toujours enregistrer le handler pour fetchGitHubCommits même si updater est désactivé
-ipcMain.handle(IpcEvents.FETCH_GITHUB_COMMITS, serializeErrors((repoSlug: string, fromHash: string, toHash: string) => fetchGitHubCommitsFallback(repoSlug, fromHash, toHash)));
