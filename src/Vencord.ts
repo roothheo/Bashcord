@@ -125,8 +125,36 @@ async function syncSettings() {
 }
 
 let notifiedForUpdatesThisSession = false;
+let isUpdatingInProgress = false;
+let lastUpdateCheckTime = 0;
 
 async function runUpdateCheck() {
+    // Protection anti-boucle : ne pas vérifier si une mise à jour est déjà en cours
+    if (isUpdatingInProgress) {
+        UpdateLogger.info("Update already in progress, skipping check");
+        return;
+    }
+
+    // Protection anti-boucle : ne pas vérifier trop souvent (minimum 2 minutes entre les vérifications)
+    const now = Date.now();
+    const timeSinceLastCheck = now - lastUpdateCheckTime;
+    if (timeSinceLastCheck < 2 * 60 * 1000) {
+        UpdateLogger.info(`Skipping update check (last check ${Math.round(timeSinceLastCheck / 1000)}s ago)`);
+        return;
+    }
+    lastUpdateCheckTime = now;
+
+    // Protection anti-boucle : vérifier si une mise à jour a été installée récemment (dans les 5 dernières minutes)
+    // Cela évite les boucles infinies si le hash ne correspond pas
+    const lastUpdateTime = localStorage.getItem("bashcord-last-update-time");
+    if (lastUpdateTime) {
+        const timeSinceLastUpdate = now - parseInt(lastUpdateTime, 10);
+        if (timeSinceLastUpdate < 5 * 60 * 1000) {
+            UpdateLogger.info(`Recent update detected (${Math.round(timeSinceLastUpdate / 1000)}s ago), skipping check to prevent loop`);
+            return;
+        }
+    }
+
     const notify = (data: NotificationData) => {
         if (notifiedForUpdatesThisSession) return;
         notifiedForUpdatesThisSession = true;
@@ -140,15 +168,33 @@ async function runUpdateCheck() {
 
     try {
         const isOutdated = await checkForUpdates();
-        if (!isOutdated) return;
+        if (!isOutdated) {
+            // Si pas de mise à jour, enregistrer le hash actuel comme "dernière version vérifiée"
+            // Cela évite les boucles si la release ne contient pas de hash valide
+            if (IS_STANDALONE) {
+                localStorage.setItem("bashcord-last-checked-hash", gitHash.slice(0, 7));
+            }
+            return;
+        }
 
         // Installation automatique forcée pour garantir que Bashcord reste à jour
         // même si Discord change quelque chose qui bloque l'accès aux paramètres
         UpdateLogger.info("Bashcord update detected, installing automatically...");
+        isUpdatingInProgress = true;
         
         const updateSuccess = await update();
         if (updateSuccess) {
             UpdateLogger.info("Bashcord updated successfully, restarting...");
+            // Enregistrer le timestamp de la mise à jour pour éviter les boucles
+            localStorage.setItem("bashcord-last-update-time", now.toString());
+            // Enregistrer le hash de la release comme dernière version installée
+            if (IS_STANDALONE && changes.length > 0) {
+                const releaseHash = changes[0].hash;
+                if (releaseHash && releaseHash.length >= 7) {
+                    localStorage.setItem("bashcord-last-installed-hash", releaseHash.slice(0, 7));
+                }
+            }
+            
             // Toujours notifier l'utilisateur qu'une mise à jour a été installée
             notify({
                 title: "Bashcord has been updated!",
@@ -161,6 +207,7 @@ async function runUpdateCheck() {
             }, 3000);
         } else {
             UpdateLogger.error("Failed to install Bashcord update");
+            isUpdatingInProgress = false;
             notify({
                 title: "Bashcord update failed",
                 body: "An update was available but installation failed. Check console for details.",
@@ -168,6 +215,7 @@ async function runUpdateCheck() {
             });
         }
     } catch (err) {
+        isUpdatingInProgress = false;
         UpdateLogger.error("Failed to check or install updates", err);
         notify({
             title: "Bashcord update check failed",

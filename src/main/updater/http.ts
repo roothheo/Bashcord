@@ -113,29 +113,28 @@ async function fetchUpdates() {
         }
     }
     
-    // Si on a trouvé un hash valide, comparer avec le hash actuel
+    // Pour les standalone, le hash Git compilé dans l'ASAR ne change pas après une mise à jour.
+    // On ne peut donc pas comparer directement le hash du build avec celui de la release.
+    // La comparaison sera faite côté renderer avec localStorage.
+    // Ici, on retourne simplement si une release avec ASAR est disponible.
+    
+    // Si on a trouvé un hash valide dans la release, on le retourne pour comparaison côté renderer
     if (releaseHash && releaseHash.length >= 7) {
-        // Comparer les 7 premiers caractères du hash (format court standard)
-        const currentHashShort = gitHash.slice(0, 7);
         const releaseHashShort = releaseHash.slice(0, 7);
+        const currentHashShort = gitHash.slice(0, 7);
         
+        // Comparer quand même avec le hash du build (au cas où c'est la première fois)
+        // Mais ce ne sera pas fiable après la première mise à jour
         if (releaseHashShort.toLowerCase() === currentHashShort.toLowerCase()) {
-            UpdateLogger.info(`Already on latest version (hash match: ${currentHashShort}), no update needed`);
+            UpdateLogger.info(`Already on latest version (initial hash match: ${currentHashShort}), no update needed`);
             return false;
         }
         
-        // Vérifier aussi le hash complet au cas où (hash complet de 40 caractères)
-        if (releaseHash.length >= 40 && gitHash.toLowerCase().startsWith(releaseHashShort.toLowerCase())) {
-            UpdateLogger.info(`Already on latest version (full hash match), no update needed`);
-            return false;
-        }
-        
-        UpdateLogger.info(`Update available: current=${currentHashShort}, release=${releaseHashShort}`);
+        UpdateLogger.info(`Release hash found: ${releaseHashShort}, current build hash: ${currentHashShort}`);
     } else {
-        // Si on ne peut pas déterminer le hash de la release, on ne peut pas comparer
-        // Dans ce cas, on assume qu'il y a une mise à jour pour être sûr
-        // (mieux vaut mettre à jour inutilement que ne pas mettre à jour quand il faut)
-        UpdateLogger.warn(`Could not extract hash from release (name: "${releaseName}", tag: "${releaseTag}"), assuming update available`);
+        // Si on ne peut pas déterminer le hash de la release, on ne déclenche PAS de mise à jour pour éviter les boucles
+        UpdateLogger.warn(`Could not extract hash from release (name: "${releaseName}", tag: "${releaseTag}"), skipping update to prevent loop`);
+        return false;
     }
     
     PendingUpdate = asset.browser_download_url;
