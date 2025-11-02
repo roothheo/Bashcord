@@ -32,3 +32,6 @@ ExtensionCache/
 # wakatime related stuff
 .wakatime-project
 
+# Cursor IDE files
+.cursor/
+

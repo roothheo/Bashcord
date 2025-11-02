@@ -15,6 +15,7 @@ These files are automatically protected during updates:
 - `src/bashplugins/` - All custom Bashcord plugins
 - `src/components/WelcomeModal.tsx` - Welcome popup component
 - `.github/workflows/` - Custom CI/CD workflows
+- `browser/` - Browser extension files (manifests, userscript metadata)
 
 ### Sync Process
 
@@ -51,7 +52,13 @@ When making manual updates or resolving conflicts:
 - Ensure build scripts reference `bashplugins` not `userplugins`
 - Update `.gitignore` to include `bashplugins/` in version control
 
-### 3. Update Workflows
+### 3. Browser Extension Branding
+- Keep "Bashcord Web" name in `browser/manifest.json` and `browser/manifestv2.json`
+- Maintain "Bashcord" branding in `browser/userscript.meta.js`
+- Preserve "BashcordSettings" localStorage key in `browser/VencordNativeStub.ts`
+- Keep "Bashcord QuickCSS Editor" title in `browser/monacoWin.html`
+
+### 4. Update Workflows
 - Ensure workflows reference correct directories
 - Update file naming from `equibop*` to `bashcord*`
 - Maintain protected files list

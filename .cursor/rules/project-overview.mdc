@@ -14,13 +14,16 @@ Bashcord is a customized Discord client mod based on Equicord (which is a fork o
 - **Welcome Modal**: [src/components/WelcomeModal.tsx](mdc:src/components/WelcomeModal.tsx) - Welcome popup for new users
 - **Build Scripts**: [scripts/build/](mdc:scripts/build/) - Build system for plugins and main app
 - **GitHub Workflows**: [.github/workflows/](mdc:.github/workflows/) - CI/CD for updates, building, and releases
+- **Browser Extension**: [browser/](mdc:browser/) - Browser extension manifests and web version files
 
 ## Important Branding Changes
 
 - All "Equicord" references should be changed to "Bashcord" in user-facing text
+- Browser extension name: "Bashcord Web" (not "Equicord Web")
 - Settings tab labeled "Bashplugins" instead of "Plugins"
 - Custom plugins directory is `bashplugins/` not `userplugins/`
 - Release files should be prefixed with "bashcord" not "equibop"
+- localStorage keys use "BashcordSettings" (not "EquicordSettings")
 
 ## Protected Files During Updates
 
@@ -29,3 +32,4 @@ These files are protected during automatic Equicord updates:
 - `src/bashplugins/` - Custom Bashcord plugins
 - `src/components/WelcomeModal.tsx` - Welcome popup
 - `.github/workflows/` - Custom CI/CD workflows
+- `browser/` - Browser extension manifests and branding (BashcordWeb)

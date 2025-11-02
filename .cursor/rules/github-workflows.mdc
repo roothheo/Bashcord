@@ -30,6 +30,7 @@ The sync workflows protect these Bashcord-specific files:
 - `src/bashplugins/` - Custom Bashcord plugins directory
 - `src/components/WelcomeModal.tsx` - Welcome popup component
 - `.github/workflows/` - Custom CI/CD workflows
+- `browser/` - Browser extension manifests and branding files
 
 ## File Naming Convention
 
