@@ -19,6 +19,7 @@
 import gitHash from "~git-hash";
 
 import { Logger } from "./Logger";
+import { localStorage } from "./localStorage";
 import { relaunch } from "./native";
 import { IpcRes } from "./types";
 
