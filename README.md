@@ -165,7 +165,8 @@ Bashcord utilise un système de mise à jour automatique forcé qui :
 
 - ✅ **Vérifie les mises à jour au démarrage** de Discord
 - ✅ **Installe automatiquement** les nouvelles versions disponibles
-- ✅ **Rebuild et relance** Discord automatiquement après mise à jour
+- ✅ **Rebuild automatique** après mise à jour
+- ✅ **Notification pour redémarrer** : vous pouvez redémarrer Discord manuellement ou via la notification
 - ✅ **Vérifie périodiquement** toutes les 30 minutes pour rester à jour
 - ✅ **Indépendant des paramètres** : fonctionne même si autoUpdate est désactivé
 
@@ -180,16 +181,16 @@ Quand Discord modifie son interface ou ses paramètres, cela peut bloquer l'acc�
 2. **Si une mise à jour est disponible** :
    - Installation automatique via `git pull`
    - Rebuild automatique des fichiers
-   - Notification à l'utilisateur
-   - Relancement automatique après 3 secondes
+   - Notification à l'utilisateur avec option de redémarrer
+   - Redémarrage manuel via la notification ou le menu Discord
 
 **Pour les utilisateurs de l'installer (Standalone)** :
 1. **Au démarrage** : Bashcord vérifie les dernières releases GitHub de Bashcord
 2. **Si une nouvelle release est disponible** :
    - Téléchargement automatique du fichier `.asar` depuis GitHub
    - Remplacement automatique de l'ancien fichier
-   - Notification à l'utilisateur
-   - Relancement automatique après 3 secondes
+   - Notification à l'utilisateur avec option de redémarrer
+   - Redémarrage manuel via la notification ou le menu Discord
 
 3. **Vérification continue** : Nouvelle vérification toutes les 30 minutes (pour les deux types)
 
