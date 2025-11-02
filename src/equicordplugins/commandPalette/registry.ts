@@ -1666,7 +1666,7 @@ function registerUpdateCommands() {
     registerCommand({
         id: "check-for-updates",
         label: "Check for Updates",
-        description: "Checks for Equicord updates",
+        description: "Checks for Bashcord updates",
         keywords: ["updates", "check", "updater"],
         categoryId: "updates",
         tags: [TAG_DEVELOPER, TAG_UTILITY],

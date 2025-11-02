@@ -206,11 +206,11 @@ function Updater() {
     };
 
     return (
-        <SettingsTab title="Equicord Updater">
+        <SettingsTab title="Bashcord Updater">
             <Heading>Updater Settings</Heading>
             <FormSwitch
                 title="Automatically update"
-                description="Automatically update Equicord without confirmation prompt"
+                description="Automatically update Bashcord without confirmation prompt"
                 value={settings.autoUpdate}
                 onChange={(v: boolean) => settings.autoUpdate = v}
             />
@@ -218,7 +218,7 @@ function Updater() {
                 value={settings.autoUpdateNotification}
                 onChange={(v: boolean) => settings.autoUpdateNotification = v}
                 title="Get notified when an automatic update completes"
-                description="Shows a notification when Equicord automatically updates"
+                description="Shows a notification when Bashcord automatically updates"
                 disabled={!settings.autoUpdate}
             />
 

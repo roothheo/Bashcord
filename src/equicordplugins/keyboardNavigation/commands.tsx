@@ -28,7 +28,7 @@ export const actions: ButtonAction[] = [
     { id: "openEquicordSettings", label: "Open Equicord tab", callback: async () => await SettingsRouter.open("EquicordSettings"), registrar: "Equicord" },
     { id: "openPluginSettings", label: "Open Plugin tab", callback: () => SettingsRouter.open("EquicordPlugins"), registrar: "Equicord" },
     { id: "openThemesSettings", label: "Open Themes tab", callback: () => SettingsRouter.open("EquicordThemes"), registrar: "Equicord" },
-    { id: "openUpdaterSettings", label: "Open Updater tab", callback: () => SettingsRouter.open("EquicordUpdater"), registrar: "Equicord" },
+    { id: "openUpdaterSettings", label: "Open Updater tab", callback: () => SettingsRouter.open("BashcordUpdater"), registrar: "Equicord" },
     { id: "openEquicordCloudSettings", label: "Open Cloud tab", callback: () => SettingsRouter.open("EquicordCloud"), registrar: "Equicord" },
     { id: "openBackupSettings", label: "Open Backup & Restore tab", callback: () => SettingsRouter.open("EquicordSettingsSync"), registrar: "Equicord" },
     { id: "restartClient", label: "Restart Client", callback: () => relaunch(), registrar: "Equicord" },
@@ -134,12 +134,12 @@ export const actions: ButtonAction[] = [
 
             if (isOutdated) {
                 setTimeout(() => showNotification({
-                    title: "A Equicord update is available!",
+                    title: "A Bashcord update is available!",
                     body: "Click here to view the update",
                     permanent: true,
                     noPersist: true,
                     onClick() {
-                        SettingsRouter.open("EquicordUpdater");
+                        SettingsRouter.open("BashcordUpdater");
                     }
                 }), 10_000);
             } else {

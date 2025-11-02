@@ -127,10 +127,6 @@ async function syncSettings() {
 let notifiedForUpdatesThisSession = false;
 
 async function runUpdateCheck() {
-    // Notifications d'update désactivées pour Bashcord
-    // L'updater reste fonctionnel via l'interface des paramètres
-    return;
-
     const notify = (data: NotificationData) => {
         if (notifiedForUpdatesThisSession) return;
         notifiedForUpdatesThisSession = true;
@@ -146,25 +142,38 @@ async function runUpdateCheck() {
         const isOutdated = await checkForUpdates();
         if (!isOutdated) return;
 
-        if (Settings.autoUpdate) {
-            await update();
-            if (Settings.autoUpdateNotification) {
-                notify({
-                    title: "Equicord has been updated!",
-                    body: "Click here to restart",
-                    onClick: relaunch
-                });
-            }
-            return;
+        // Installation automatique forcée pour garantir que Bashcord reste à jour
+        // même si Discord change quelque chose qui bloque l'accès aux paramètres
+        UpdateLogger.info("Bashcord update detected, installing automatically...");
+        
+        const updateSuccess = await update();
+        if (updateSuccess) {
+            UpdateLogger.info("Bashcord updated successfully, restarting...");
+            // Toujours notifier l'utilisateur qu'une mise à jour a été installée
+            notify({
+                title: "Bashcord has been updated!",
+                body: "Click here to restart Discord to apply changes",
+                onClick: relaunch
+            });
+            // Relancer automatiquement après un court délai pour appliquer les changements
+            setTimeout(() => {
+                relaunch();
+            }, 3000);
+        } else {
+            UpdateLogger.error("Failed to install Bashcord update");
+            notify({
+                title: "Bashcord update failed",
+                body: "An update was available but installation failed. Check console for details.",
+                color: "var(--red-360)"
+            });
         }
-
-        notify({
-            title: "A Equicord update is available!",
-            body: "Click here to view the update",
-            onClick: openUpdaterModal!
-        });
     } catch (err) {
-        UpdateLogger.error("Failed to check for updates", err);
+        UpdateLogger.error("Failed to check or install updates", err);
+        notify({
+            title: "Bashcord update check failed",
+            body: "Failed to check for updates. Check console for details.",
+            color: "var(--red-360)"
+        });
     }
 }
 
@@ -190,12 +199,12 @@ async function init() {
     }, 3000);
 
     if (!IS_DEV && !IS_WEB && !IS_UPDATER_DISABLED) {
+        // Vérification immédiate au démarrage
         runUpdateCheck();
 
-        // this tends to get really annoying, so only do this if the user has auto-update without notification enabled
-        if (Settings.autoUpdate && !Settings.autoUpdateNotification) {
-            setInterval(runUpdateCheck, 1000 * 60 * 30); // 30 minutes
-        }
+        // Vérification périodique toutes les 30 minutes pour garantir que Bashcord reste à jour
+        // même si Discord change quelque chose qui bloque l'accès aux paramètres
+        setInterval(runUpdateCheck, 1000 * 60 * 30); // 30 minutes
     }
 
     if (IS_DEV) {
