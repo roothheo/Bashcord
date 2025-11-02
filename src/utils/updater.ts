@@ -51,6 +51,33 @@ export async function checkForUpdates() {
             isNewer = true;
             return (isOutdated = false);
         }
+    } else {
+        // Pour les standalone, vérifier si le hash de la release correspond à celui déjà installé
+        // Le hash du build ne change pas après une mise à jour, donc on utilise localStorage
+        if (changes.length > 0) {
+            const releaseHash = changes[0].hash;
+            if (releaseHash && releaseHash.length >= 7) {
+                const releaseHashShort = releaseHash.slice(0, 7);
+                const lastInstalledHash = localStorage.getItem("bashcord-last-installed-hash");
+                const lastCheckedHash = localStorage.getItem("bashcord-last-checked-hash");
+                
+                // Comparer avec le dernier hash installé (priorité) ou le dernier hash vérifié
+                const hashToCompare = lastInstalledHash || lastCheckedHash || gitHash.slice(0, 7);
+                
+                if (releaseHashShort.toLowerCase() === hashToCompare.toLowerCase()) {
+                    UpdateLogger.info(`Already on latest version (installed hash: ${hashToCompare}), no update needed`);
+                    return (isOutdated = false);
+                }
+                
+                // Si le hash de la release correspond au hash du build actuel et qu'on n'a pas de hash installé,
+                // c'est probablement la première vérification et on est à jour
+                if (!lastInstalledHash && releaseHashShort.toLowerCase() === gitHash.slice(0, 7).toLowerCase()) {
+                    UpdateLogger.info(`Already on latest version (build hash match: ${gitHash.slice(0, 7)}), no update needed`);
+                    localStorage.setItem("bashcord-last-checked-hash", releaseHashShort);
+                    return (isOutdated = false);
+                }
+            }
+        }
     }
 
     return (isOutdated = changes.length > 0);
