@@ -19,8 +19,6 @@
 // DO NOT REMOVE UNLESS YOU WISH TO FACE THE WRATH OF THE CIRCULAR DEPENDENCY DEMON!!!!!!!
 import "~plugins";
 
-import gitHash from "~git-hash";
-
 import "./utils/quickCss";
 import "./webpack/patchWebpack";
 
@@ -174,7 +172,7 @@ async function runUpdateCheck() {
             // Si pas de mise à jour, enregistrer le hash actuel comme "dernière version vérifiée"
             // Cela évite les boucles si la release ne contient pas de hash valide
             if (IS_STANDALONE) {
-                localStorage.setItem("bashcord-last-checked-hash", gitHash.slice(0, 7));
+                localStorage.setItem("bashcord-last-checked-hash", shortGitHash(7));
             }
             return;
         }
