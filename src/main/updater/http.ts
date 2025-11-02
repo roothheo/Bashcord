@@ -22,12 +22,19 @@ import { VENCORD_USER_AGENT } from "@shared/vencordUserAgent";
 import { ipcMain } from "electron";
 import { writeFileSync as originalWriteFileSync } from "original-fs";
 
+import { Logger } from "@utils/Logger";
+
+const UpdateLogger = new Logger("Updater", "white");
+
 import gitHash from "~git-hash";
 import gitRemote from "~git-remote";
 
 import { ASAR_FILE, serializeErrors } from "./common";
 
-const API_BASE = `https://api.github.com/repos/${gitRemote}`;
+// Utiliser le repo Bashcord pour les mises à jour standalone
+// Cela garantit que les utilisateurs de l'installer obtiennent les mises à jour Bashcord
+const BASHCORD_REPO = "roothheo/Bashcord";
+const API_BASE = `https://api.github.com/repos/${BASHCORD_REPO}`;
 let PendingUpdate: string | null = null;
 
 async function githubGet<T = any>(endpoint: string) {
@@ -45,27 +52,46 @@ async function calculateGitChanges() {
     const isOutdated = await fetchUpdates();
     if (!isOutdated) return [];
 
-    const data = await githubGet(`/compare/${gitHash}...HEAD`);
-
-    return data.commits.map((c: any) => ({
-        // github api only sends the long sha
-        hash: c.sha.slice(0, 7),
-        author: c.author.login,
-        message: c.commit.message.split("\n")[0]
-    }));
+    // Pour les utilisateurs standalone, on ne peut pas comparer avec git
+    // On retourne simplement une liste avec un message générique indiquant qu'une mise à jour est disponible
+    try {
+        const release = await githubGet("/releases/latest");
+        return [{
+            hash: release.tag_name || "latest",
+            author: "Bashcord",
+            message: release.name || "New Bashcord update available"
+        }];
+    } catch (err) {
+        // Fallback si la récupération de la release échoue
+        return [{
+            hash: "unknown",
+            author: "Bashcord",
+            message: "Update available"
+        }];
+    }
 }
 
 async function fetchUpdates() {
     const data = await githubGet("/releases/latest");
 
-    const hash = data.name.slice(data.name.lastIndexOf(" ") + 1);
-    if (hash === gitHash)
+    // Vérifier si une mise à jour est disponible
+    // Le nom de la release peut contenir un hash ou une version
+    const releaseName = data.name || "";
+    const releaseHash = releaseName.slice(releaseName.lastIndexOf(" ") + 1);
+    
+    // Si le hash est présent dans le nom et correspond au hash actuel, pas de mise à jour
+    if (releaseHash && releaseHash.length >= 7 && releaseHash === gitHash) {
         return false;
+    }
 
-
+    // Chercher le fichier ASAR dans les assets
     const asset = data.assets.find(a => a.name === ASAR_FILE);
-    PendingUpdate = asset.browser_download_url;
+    if (!asset) {
+        UpdateLogger.warn(`No ${ASAR_FILE} asset found in latest release`);
+        return false;
+    }
 
+    PendingUpdate = asset.browser_download_url;
     return true;
 }
 
@@ -80,7 +106,8 @@ async function applyUpdates() {
     return true;
 }
 
-ipcMain.handle(IpcEvents.GET_REPO, serializeErrors(() => `https://github.com/${gitRemote}`));
+// Retourner toujours le repo Bashcord pour les utilisateurs standalone
+ipcMain.handle(IpcEvents.GET_REPO, serializeErrors(() => `https://github.com/${BASHCORD_REPO}`));
 ipcMain.handle(IpcEvents.GET_UPDATES, serializeErrors(calculateGitChanges));
 ipcMain.handle(IpcEvents.UPDATE, serializeErrors(fetchUpdates));
 ipcMain.handle(IpcEvents.BUILD, serializeErrors(applyUpdates));
