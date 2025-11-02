@@ -29,6 +29,8 @@ export * as Webpack from "./webpack";
 export * as WebpackPatcher from "./webpack/patchWebpack";
 export { PlainSettings, Settings };
 
+import gitHash from "~git-hash";
+
 import "./utils/quickCss";
 import "./webpack/patchWebpack";
 
