@@ -19,6 +19,11 @@
 // DO NOT REMOVE UNLESS YOU WISH TO FACE THE WRATH OF THE CIRCULAR DEPENDENCY DEMON!!!!!!!
 import "~plugins";
 
+import gitHash from "~git-hash";
+
+import "./utils/quickCss";
+import "./webpack/patchWebpack";
+
 export * as Api from "./api";
 export * as Components from "./components";
 export * as Plugins from "./plugins";
@@ -28,11 +33,6 @@ export * as Updater from "./utils/updater";
 export * as Webpack from "./webpack";
 export * as WebpackPatcher from "./webpack/patchWebpack";
 export { PlainSettings, Settings };
-
-import gitHash from "~git-hash";
-
-import "./utils/quickCss";
-import "./webpack/patchWebpack";
 
 import { addVencordUiStyles } from "@components/css";
 import { openUpdaterModal } from "@components/settings/tabs/updater";
