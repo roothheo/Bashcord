@@ -150,10 +150,47 @@ Le branding Bashcord est géré dans :
 
 ## 🔄 Mise à jour automatique
 
-Bashcord se synchronise automatiquement avec les mises à jour d'Equicord tout en préservant :
+### Synchronisation avec Equicord
+
+Bashcord se synchronise automatiquement avec les mises à jour d'Equicord via GitHub Actions tout en préservant :
 - Les plugins exclusifs dans `src/bashplugins/`
 - Le branding et l'interface personnalisée
 - Les workflows CI/CD personnalisés
+
+### Mise à jour automatique client (Desktop)
+
+**⚠️ Important : Bashcord installe automatiquement les mises à jour pour garantir la compatibilité**
+
+Bashcord utilise un système de mise à jour automatique forcé qui :
+
+- ✅ **Vérifie les mises à jour au démarrage** de Discord
+- ✅ **Installe automatiquement** les nouvelles versions disponibles
+- ✅ **Rebuild et relance** Discord automatiquement après mise à jour
+- ✅ **Vérifie périodiquement** toutes les 30 minutes pour rester à jour
+- ✅ **Indépendant des paramètres** : fonctionne même si autoUpdate est désactivé
+
+#### Pourquoi l'auto-update est forcé ?
+
+Quand Discord modifie son interface ou ses paramètres, cela peut bloquer l'accès aux paramètres de Bashcord, à l'updater, et aux plugins. Le système de mise à jour automatique forcé garantit que Bashcord reste toujours compatible et à jour, même dans ces cas.
+
+#### Fonctionnement
+
+1. **Au démarrage** : Bashcord vérifie immédiatement s'il y a des mises à jour disponibles
+2. **Si une mise à jour est disponible** :
+   - Installation automatique via `git pull`
+   - Rebuild automatique des fichiers
+   - Notification à l'utilisateur
+   - Relancement automatique après 3 secondes
+3. **Vérification continue** : Nouvelle vérification toutes les 30 minutes
+
+#### Personnalisation
+
+Bien que l'installation soit automatique, vous pouvez toujours :
+- Voir les détails des mises à jour dans **Settings → Bashcord Updater**
+- Vérifier manuellement via la commande `checkForUpdates` dans le Command Palette
+- Consulter les logs dans la console pour le débogage
+
+> **Note** : Le système fonctionne uniquement sur la version Desktop. La version Web et Browser Extension se mettent à jour via les méthodes standards.
 
 ## 🤝 Contribution
 
