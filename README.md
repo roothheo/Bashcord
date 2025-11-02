@@ -173,15 +173,25 @@ Bashcord utilise un système de mise à jour automatique forcé qui :
 
 Quand Discord modifie son interface ou ses paramètres, cela peut bloquer l'accès aux paramètres de Bashcord, à l'updater, et aux plugins. Le système de mise à jour automatique forcé garantit que Bashcord reste toujours compatible et à jour, même dans ces cas.
 
-#### Fonctionnement
+#### Fonctionnement selon le type d'installation
 
+**Pour les utilisateurs qui ont cloné le repo (Git)** :
 1. **Au démarrage** : Bashcord vérifie immédiatement s'il y a des mises à jour disponibles
 2. **Si une mise à jour est disponible** :
    - Installation automatique via `git pull`
    - Rebuild automatique des fichiers
    - Notification à l'utilisateur
    - Relancement automatique après 3 secondes
-3. **Vérification continue** : Nouvelle vérification toutes les 30 minutes
+
+**Pour les utilisateurs de l'installer (Standalone)** :
+1. **Au démarrage** : Bashcord vérifie les dernières releases GitHub de Bashcord
+2. **Si une nouvelle release est disponible** :
+   - Téléchargement automatique du fichier `.asar` depuis GitHub
+   - Remplacement automatique de l'ancien fichier
+   - Notification à l'utilisateur
+   - Relancement automatique après 3 secondes
+
+3. **Vérification continue** : Nouvelle vérification toutes les 30 minutes (pour les deux types)
 
 #### Personnalisation
 
