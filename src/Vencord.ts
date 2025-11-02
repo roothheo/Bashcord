@@ -180,7 +180,7 @@ async function runUpdateCheck() {
         
         const updateSuccess = await update();
         if (updateSuccess) {
-            UpdateLogger.info("Bashcord updated successfully, restarting...");
+            UpdateLogger.info("Bashcord updated successfully");
             // Enregistrer le timestamp de la mise à jour pour éviter les boucles
             localStorage.setItem("bashcord-last-update-time", now.toString());
             // Enregistrer le timestamp de la release comme dernière version installée
@@ -203,16 +203,13 @@ async function runUpdateCheck() {
                 }
             }
             
-            // Toujours notifier l'utilisateur qu'une mise à jour a été installée
+            // Notifier l'utilisateur qu'une mise à jour a été installée
+            // L'utilisateur peut choisir de redémarrer manuellement
             notify({
                 title: "Bashcord has been updated!",
-                body: "Click here to restart Discord to apply changes",
+                body: "Click here to restart Discord to apply changes (or restart manually)",
                 onClick: relaunch
             });
-            // Relancer automatiquement après un court délai pour appliquer les changements
-            setTimeout(() => {
-                relaunch();
-            }, 3000);
         } else {
             UpdateLogger.error("Failed to install Bashcord update");
             isUpdatingInProgress = false;
