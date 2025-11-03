@@ -72,31 +72,55 @@ export async function checkForUpdates() {
                 }
                 
                 if (!isNaN(releaseTime) && releaseTime > 0) {
+                    // Validation : vérifier que le timestamp n'est pas dans le futur (plus de 1 jour)
+                    const now = Date.now();
+                    const futureDiff = releaseTime - now;
+                    if (futureDiff > 24 * 60 * 60 * 1000) {
+                        UpdateLogger.warn(`Release timestamp is in the future (${Math.round(futureDiff / 1000 / 60 / 60)} hours ahead), ignoring`);
+                        return (isOutdated = false);
+                    }
+
                     const lastInstalledTimestamp = localStorage.getItem("bashcord-last-installed-timestamp");
                     
                     if (lastInstalledTimestamp) {
                         const lastInstalledTime = parseInt(lastInstalledTimestamp, 10);
-                        // Utiliser une comparaison avec une tolérance de 1 seconde pour éviter les problèmes d'égalité exacte
-                        const timeDiff = releaseTime - lastInstalledTime;
-                        if (!isNaN(lastInstalledTime) && timeDiff <= 1000) {
-                            UpdateLogger.info(`Already on latest version (installed: ${new Date(lastInstalledTime).toISOString()}, release: ${new Date(releaseTime).toISOString()}), no update needed`);
-                            return (isOutdated = false);
+                        
+                        if (isNaN(lastInstalledTime) || lastInstalledTime <= 0) {
+                            UpdateLogger.warn("Invalid lastInstalledTimestamp in localStorage, resetting");
+                            localStorage.removeItem("bashcord-last-installed-timestamp");
+                            // Continuer comme si c'était la première vérification
+                        } else {
+                            // Utiliser une comparaison avec une tolérance de 1 seconde pour éviter les problèmes d'égalité exacte
+                            const timeDiff = releaseTime - lastInstalledTime;
+                            
+                            // Si la release est identique ou plus ancienne (dans la tolérance de 1 seconde), on est à jour
+                            if (timeDiff <= 1000) {
+                                UpdateLogger.info(`Already on latest version (installed: ${new Date(lastInstalledTime).toISOString()}, release: ${new Date(releaseTime).toISOString()}, diff: ${Math.round(timeDiff / 1000)}s), no update needed`);
+                                return (isOutdated = false);
+                            }
+                            
+                            // Si la release est plus récente de plus d'1 seconde, c'est une nouvelle mise à jour
+                            if (timeDiff > 1000) {
+                                UpdateLogger.info(`New release detected: ${new Date(releaseTime).toISOString()} (current: ${new Date(lastInstalledTime).toISOString()}, diff: ${Math.round(timeDiff / 1000 / 60)} minutes)`);
+                                // Pas de return ici, on veut continuer pour déclarer qu'on est outdated
+                            }
                         }
-                        // Si la release est plus récente de plus d'1 seconde, c'est une nouvelle mise à jour
-                        if (timeDiff > 1000) {
-                            UpdateLogger.info(`New release detected: ${new Date(releaseTime).toISOString()} (current: ${new Date(lastInstalledTime).toISOString()})`);
-                        }
-                    } else {
-                        // Première vérification : on est probablement à jour si le timestamp est très récent
-                        // (moins d'1 heure = probablement la même release qu'on vient d'installer)
-                        const now = Date.now();
+                    }
+                    
+                    // Première vérification ou timestamp invalide dans localStorage
+                    if (!lastInstalledTimestamp || isNaN(parseInt(lastInstalledTimestamp, 10))) {
+                        // Si le timestamp de la release est très récent (moins d'1 heure), on assume qu'on vient de l'installer
                         const timeDiff = Math.abs(now - releaseTime);
                         if (timeDiff < 60 * 60 * 1000) { // 1 heure
                             UpdateLogger.info(`First check: release timestamp is recent (${Math.round(timeDiff / 1000 / 60)} minutes old), assuming up-to-date`);
                             localStorage.setItem("bashcord-last-installed-timestamp", releaseTime.toString());
                             return (isOutdated = false);
                         }
+                        // Sinon, c'est probablement une nouvelle release
+                        UpdateLogger.info(`First check: release timestamp is old (${Math.round(timeDiff / 1000 / 60 / 60)} hours old), this appears to be a new release`);
                     }
+                } else {
+                    UpdateLogger.warn(`Invalid release timestamp: ${releaseTimestamp}, cannot compare versions`);
                 }
             }
         }
@@ -106,17 +130,37 @@ export async function checkForUpdates() {
 }
 
 export async function update() {
-    if (!isOutdated) return true;
-
-    const res = await Unwrap(VencordNative.updater.update());
-
-    if (res) {
-        isOutdated = false;
-        if (!await Unwrap(VencordNative.updater.rebuild()))
-            throw new Error("The Build failed. Please try manually building the new update");
+    if (!isOutdated) {
+        UpdateLogger.debug("update() called but not outdated, skipping");
+        return true;
     }
 
-    return res;
+    try {
+        UpdateLogger.info("Starting update process...");
+        const res = await Unwrap(VencordNative.updater.update());
+
+        if (res) {
+            UpdateLogger.info("Update downloaded, starting rebuild...");
+            isOutdated = false;
+            
+            const rebuildSuccess = await Unwrap(VencordNative.updater.rebuild());
+            if (!rebuildSuccess) {
+                UpdateLogger.error("Build failed after update");
+                throw new Error("The Build failed. Please try manually building the new update");
+            }
+            
+            UpdateLogger.info("Update and rebuild completed successfully");
+        } else {
+            UpdateLogger.warn("Update returned false (no update needed or failed)");
+        }
+
+        return res;
+    } catch (err: any) {
+        UpdateLogger.error("Update process failed", err);
+        // Réinitialiser isOutdated en cas d'erreur pour permettre une nouvelle tentative
+        isOutdated = true;
+        throw err;
+    }
 }
 
 export const getRepo = () => Unwrap(VencordNative.updater.getRepo());

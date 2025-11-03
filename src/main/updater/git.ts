@@ -79,18 +79,52 @@ async function calculateGitChanges() {
         const res = await git("log", `HEAD...origin/${branch}`, "--pretty=format:%an/%h/%s");
 
         const commits = res.stdout.trim();
+        
+        if (!commits) {
+            return []; // Pas de commits à traiter
+        }
+
         // Filtrer pour ne garder que les commits de actions-user (releases automatiques)
-        const filteredCommits = commits ? commits.split("\n").filter(line => {
-            const [author] = line.split("/");
-            // Accepter github-actions, github-actions[bot], ou actions-user
-            return author?.includes("actions") || author?.toLowerCase() === "actions-user" || author?.toLowerCase().includes("github-actions");
-        }).map(line => {
-            const [author, hash, ...rest] = line.split("/");
-            return {
-                hash, author,
-                message: rest.join("/").split("\n")[0]
-            };
-        }) : [];
+        const filteredCommits = commits.split("\n")
+            .filter(line => {
+                if (!line || !line.includes("/")) {
+                    return false; // Ligne invalide
+                }
+                
+                const parts = line.split("/");
+                if (parts.length < 2) {
+                    return false; // Pas assez de parties
+                }
+                
+                const author = parts[0]?.trim();
+                if (!author) {
+                    return false;
+                }
+                
+                // Accepter github-actions, github-actions[bot], ou actions-user
+                return author.includes("actions") || 
+                       author.toLowerCase() === "actions-user" || 
+                       author.toLowerCase().includes("github-actions");
+            })
+            .map(line => {
+                const [author, hash, ...rest] = line.split("/");
+                
+                // Validation
+                if (!hash || hash.length < 7) {
+                    console.warn(`[Git Updater] Invalid commit hash: ${hash}`);
+                }
+                
+                return {
+                    hash: hash?.trim() || "",
+                    author: author?.trim() || "Unknown",
+                    message: rest.join("/").split("\n")[0] || "No message"
+                };
+            })
+            .filter(commit => commit.hash.length >= 7); // Filtrer les commits invalides
+        
+        if (filteredCommits.length > 0) {
+            console.log(`[Git Updater] Found ${filteredCommits.length} action commits out of ${commits.split("\n").length} total commits`);
+        }
         
         return filteredCommits;
     } catch (err: any) {
