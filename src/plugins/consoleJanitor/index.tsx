@@ -161,9 +161,22 @@ export default definePlugin({
         },
         {
             find: "RPCServer:WSS",
+            replacement: [
+                {
+                    match: /\i\.error\("Error: "\.concat\((\i)\.message/,
+                    replace: '!($1?.message?.includes("EADDRINUSE")||$1?.code==="EADDRINUSE")&&$&'
+                },
+                {
+                    match: /\i\.error\((\i)\)/,
+                    replace: '!($1?.message?.includes?.("EADDRINUSE")||$1?.code==="EADDRINUSE")&&$&'
+                }
+            ]
+        },
+        {
+            find: "listen EADDRINUSE",
             replacement: {
-                match: /\i\.error\("Error: "\.concat\((\i)\.message/,
-                replace: '!$1.message.includes("EADDRINUSE")&&$&'
+                match: /throw new Error\([^)]*EADDRINUSE[^)]*\)/,
+                replace: "$self.Noop()"
             }
         },
         {
