@@ -38,7 +38,19 @@ async function fetchGitHubCommitsFallback(repoSlug: string, fromHash: string, to
 
         if (!data || !Array.isArray(data.commits)) return [];
 
-        return data.commits.map((commit: any) => {
+        // Filtrer pour ne garder que les commits de actions-user (releases automatiques)
+        const filteredCommits = data.commits.filter((commit: any) => {
+            const authorName =
+                commit?.commit?.author?.name ||
+                commit?.author?.login ||
+                "";
+            // Accepter github-actions, github-actions[bot], ou actions-user
+            return authorName?.includes("actions") || 
+                   authorName?.toLowerCase() === "actions-user" || 
+                   authorName?.toLowerCase().includes("github-actions");
+        });
+
+        return filteredCommits.map((commit: any) => {
             const message: string = commit?.commit?.message ?? "";
             const summary = message.split("\n")[0] || "No message";
             const authorName =

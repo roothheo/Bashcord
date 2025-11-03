@@ -119,6 +119,25 @@ function Updatable(props: CommonProps) {
                     disabled={isUpdating || isChecking}
                     onClick={withDispatcher(setIsUpdating, async () => {
                         if (await update()) {
+                            // Enregistrer le timestamp après une mise à jour réussie pour éviter les boucles
+                            if (IS_STANDALONE && changes.length > 0) {
+                                const releaseTimestamp = changes[0].hash;
+                                if (releaseTimestamp) {
+                                    let releaseTime: number;
+                                    try {
+                                        releaseTime = new Date(releaseTimestamp).getTime();
+                                        if (isNaN(releaseTime)) {
+                                            releaseTime = parseInt(releaseTimestamp, 10);
+                                        }
+                                    } catch {
+                                        releaseTime = parseInt(releaseTimestamp, 10);
+                                    }
+                                    if (!isNaN(releaseTime) && releaseTime > 0) {
+                                        localStorage.setItem("bashcord-last-installed-timestamp", releaseTime.toString());
+                                        UpdateLogger.info(`Stored release timestamp after manual update: ${new Date(releaseTime).toISOString()}`);
+                                    }
+                                }
+                            }
                             setUpdates([]);
                             return await new Promise<void>(r => {
                                 Alerts.show({

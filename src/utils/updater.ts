@@ -76,9 +76,15 @@ export async function checkForUpdates() {
                     
                     if (lastInstalledTimestamp) {
                         const lastInstalledTime = parseInt(lastInstalledTimestamp, 10);
-                        if (!isNaN(lastInstalledTime) && releaseTime <= lastInstalledTime) {
+                        // Utiliser une comparaison avec une tolérance de 1 seconde pour éviter les problèmes d'égalité exacte
+                        const timeDiff = releaseTime - lastInstalledTime;
+                        if (!isNaN(lastInstalledTime) && timeDiff <= 1000) {
                             UpdateLogger.info(`Already on latest version (installed: ${new Date(lastInstalledTime).toISOString()}, release: ${new Date(releaseTime).toISOString()}), no update needed`);
                             return (isOutdated = false);
+                        }
+                        // Si la release est plus récente de plus d'1 seconde, c'est une nouvelle mise à jour
+                        if (timeDiff > 1000) {
+                            UpdateLogger.info(`New release detected: ${new Date(releaseTime).toISOString()} (current: ${new Date(lastInstalledTime).toISOString()})`);
                         }
                     } else {
                         // Première vérification : on est probablement à jour si le timestamp est très récent

@@ -79,13 +79,20 @@ async function calculateGitChanges() {
         const res = await git("log", `HEAD...origin/${branch}`, "--pretty=format:%an/%h/%s");
 
         const commits = res.stdout.trim();
-        return commits ? commits.split("\n").map(line => {
+        // Filtrer pour ne garder que les commits de actions-user (releases automatiques)
+        const filteredCommits = commits ? commits.split("\n").filter(line => {
+            const [author] = line.split("/");
+            // Accepter github-actions, github-actions[bot], ou actions-user
+            return author?.includes("actions") || author?.toLowerCase() === "actions-user" || author?.toLowerCase().includes("github-actions");
+        }).map(line => {
             const [author, hash, ...rest] = line.split("/");
             return {
                 hash, author,
                 message: rest.join("/").split("\n")[0]
             };
         }) : [];
+        
+        return filteredCommits;
     } catch (err: any) {
         // Logger l'erreur mais ne pas crash
         console.error("[Git Updater] Failed to calculate changes:", err.message || err);
@@ -124,7 +131,19 @@ async function fetchGitHubCommits(repoSlug: string, fromHash: string, toHash: st
 
         if (!data || !Array.isArray(data.commits)) return [];
 
-        return data.commits.map((commit: any) => {
+        // Filtrer pour ne garder que les commits de actions-user (releases automatiques)
+        const filteredCommits = data.commits.filter((commit: any) => {
+            const authorName =
+                commit?.commit?.author?.name ||
+                commit?.author?.login ||
+                "";
+            // Accepter github-actions, github-actions[bot], ou actions-user
+            return authorName?.includes("actions") || 
+                   authorName?.toLowerCase() === "actions-user" || 
+                   authorName?.toLowerCase().includes("github-actions");
+        });
+
+        return filteredCommits.map((commit: any) => {
             const message: string = commit?.commit?.message ?? "";
             const summary = message.split("\n")[0] || "No message";
             const authorName =
