@@ -29,6 +29,7 @@ import { Margins } from "@utils/margins";
 import { classes } from "@utils/misc";
 import { ModalCloseButton, ModalContent, ModalProps, ModalRoot, ModalSize, openModal } from "@utils/modal";
 import { relaunch } from "@utils/native";
+import { localStorage } from "@utils/localStorage";
 import { useAwaiter } from "@utils/react";
 import { changes, checkForUpdates, getRepo, isNewer, shortGitHash, update, updateError, UpdateLogger } from "@utils/updater";
 import { Alerts, Button, Card, Parser, React, Toasts } from "@webpack/common";
