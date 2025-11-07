@@ -16,8 +16,59 @@ import { classes } from "@utils/misc";
 import definePlugin, { OptionType } from "@utils/types";
 import { User } from "@vencord/discord-types";
 import { filters, findStoreLazy, mapMangledModuleLazy } from "@webpack";
-import { AuthenticationStore, PresenceStore, Tooltip, UserStore, useStateFromStores } from "@webpack/common";
+import { AuthenticationStore, FluxDispatcher, PresenceStore, Tooltip, UserStore, useStateFromStores } from "@webpack/common";
 import { gitRemote } from "@shared/vencordUserAgent";
+
+// Cache system for mod types
+const CACHE_KEY = "BashcordModTypes";
+const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+interface ModTypeCache {
+    [userId: string]: {
+        modType: ModType;
+        timestamp: number;
+    };
+}
+
+function getCachedModType(userId: string): ModType | null {
+    try {
+        if (typeof localStorage === "undefined") return null;
+        const cacheStr = localStorage.getItem(CACHE_KEY);
+        if (!cacheStr) return null;
+
+        const cache: ModTypeCache = JSON.parse(cacheStr);
+        const cached = cache[userId];
+        if (!cached) return null;
+
+        // Check if cache is expired
+        if (Date.now() - cached.timestamp > CACHE_EXPIRY) {
+            delete cache[userId];
+            localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+            return null;
+        }
+
+        return cached.modType;
+    } catch (e) {
+        return null;
+    }
+}
+
+function setCachedModType(userId: string, modType: ModType): void {
+    try {
+        if (typeof localStorage === "undefined") return;
+        const cacheStr = localStorage.getItem(CACHE_KEY);
+        const cache: ModTypeCache = cacheStr ? JSON.parse(cacheStr) : {};
+
+        cache[userId] = {
+            modType,
+            timestamp: Date.now()
+        };
+
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch (e) {
+        // Ignore errors
+    }
+}
 
 export interface Session {
     sessionId: string;
@@ -73,7 +124,7 @@ function Icon(path: string, opts?: IconFactoryOpts) {
 const Icons: Record<ModType, ReturnType<typeof Icon>> = {
     vencord: Icon("M14.8 2.7 9 3.1V47h3.3c1.7 0 6.2.3 10 .7l6.7.6V2l-4.2.2c-2.4.1-6.9.3-10 .5zm1.8 6.4c1 1.7-1.3 3.6-2.7 2.2C12.7 10.1 13.5 8 15 8c.5 0 1.2.5 1.6 1.1zM16 33c0 6-.4 10-1 10s-1-4-1-10 .4-10 1-10 1 4 1 10zm15-8v23.3l3.8-.7c2-.3 4.7-.6 6-.6H43V3h-2.2c-1.3 0-4-.3-6-.6L31 1.7V25z", { viewBox: "0 0 50 50" }),
     equicord: Icon("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c-.83 0-1.5-.67-1.5-1.5S14.67 8 15.5 8 17 8.67 17 9.5 16.33 11 15.5 11zm-7 0c-.83 0-1.5-.67-1.5-1.5S7.67 8 8.5 8 10 8.67 10 9.5 9.33 11 8.5 11zm3.5 6.5c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z", { viewBox: "0 0 24 24" }),
-    bashcord: Icon("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z", { viewBox: "0 0 24 24" }),
+    bashcord: Icon("M3 3h18c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2zm0 2v14h18V5H3zm2 2h14v2H5V7zm0 4h10v2H5v-2zm0 4h8v2H5v-2zm12 0h2v2h-2v-2z", { viewBox: "0 0 24 24" }),
 };
 
 interface ModIconProps {
@@ -108,41 +159,28 @@ function detectModType(userId?: string): ModType | null {
         return getCurrentModType();
     }
 
-    // For other users, try multiple detection methods
+    // First, check cache
+    const cached = getCachedModType(userId);
+    if (cached) {
+        return cached;
+    }
+
+    // Then, check clientStatuses which Discord syncs automatically
+    // The mod type is injected via modified sessions -> clientStatuses
     try {
-        // Method 1: Check clientStatuses (if they have the plugin and injected their mod)
         const presence = PresenceStore.getState();
         const userStatus = presence?.clientStatuses?.[userId];
         if (userStatus) {
             // Check if user has mod type in their clientStatuses
+            // This will be populated by Discord's sync from modified sessions
             const modTypes: ModType[] = ["bashcord", "equicord", "vencord"];
             for (const modType of modTypes) {
                 if (modType in userStatus) {
+                    // Cache the detected mod type
+                    setCachedModType(userId, modType);
                     return modType;
                 }
             }
-        }
-
-        // Method 2: Check all sessions for mod identifiers
-        // Note: SessionsStore contains current user's sessions, but we can check
-        // if any session has mod info that might have been broadcast
-        const sessions = SessionsStore.getSessions();
-        if (typeof sessions === "object") {
-            const allSessions = Object.values(sessions);
-            for (const session of allSessions) {
-                const client = session.clientInfo?.client?.toLowerCase() || "";
-                if (client === "bashcord" || client.includes("bashcord")) return "bashcord";
-                if (client === "equicord" || client.includes("equicord")) return "equicord";
-                if (client === "vencord" || client.includes("vencord")) return "vencord";
-            }
-        }
-
-        // Method 3: Try to detect from user's presence data
-        // Some mods might leave traces in presence information
-        const user = UserStore.getUser(userId);
-        if (user) {
-            // Check if there are any hints in the user object
-            // This is a fallback method
         }
     } catch (e) {
         // Ignore errors
@@ -151,35 +189,67 @@ function detectModType(userId?: string): ModType | null {
     return null;
 }
 
+function injectModTypeIntoClientStatuses(retryCount = 0) {
+    const modType = getCurrentModType();
+    const currentUserId = AuthenticationStore.getId();
+    if (!currentUserId) {
+        // Retry after a short delay if user ID is not available yet
+        if (retryCount < 3) {
+            setTimeout(() => injectModTypeIntoClientStatuses(retryCount + 1), 500);
+        }
+        return;
+    }
+
+    try {
+        const { clientStatuses } = PresenceStore.getState();
+        if (!clientStatuses) {
+            if (retryCount < 3) {
+                setTimeout(() => injectModTypeIntoClientStatuses(retryCount + 1), 500);
+            }
+            return;
+        }
+
+        if (!clientStatuses[currentUserId]) {
+            clientStatuses[currentUserId] = {};
+        }
+
+        // Get the most active status from sessions
+        const sessions = SessionsStore.getSessions();
+        if (typeof sessions === "object" && Object.keys(sessions).length > 0) {
+            const sortedSessions = Object.values(sessions).sort(({ status: a }, { status: b }) => {
+                if (a === b) return 0;
+                if (a === "online") return -1;
+                if (b === "online") return 1;
+                if (a === "idle") return -1;
+                if (b === "idle") return 1;
+                return 0;
+            });
+
+            const activeStatus = sortedSessions[0]?.status || "offline";
+            // Add mod type alongside existing client types (don't replace them)
+            clientStatuses[currentUserId][modType] = activeStatus;
+            
+            // Cache our own mod type
+            setCachedModType(currentUserId, modType);
+        } else if (retryCount < 3) {
+            // Retry if sessions are not available yet
+            setTimeout(() => injectModTypeIntoClientStatuses(retryCount + 1), 500);
+        }
+    } catch (e) {
+        // Ignore errors, but retry if we haven't exceeded retry limit
+        if (retryCount < 3) {
+            setTimeout(() => injectModTypeIntoClientStatuses(retryCount + 1), 500);
+        }
+    }
+}
+
 function useEnsureOwnModStatus(user: User) {
     if (user.id !== AuthenticationStore.getId()) {
         return;
     }
 
-    const modType = getCurrentModType();
-    if (!modType) return;
-
-    const sessions = useStateFromStores([SessionsStore], () => SessionsStore.getSessions());
-    if (typeof sessions !== "object") return null;
-
-    const sortedSessions = Object.values(sessions).sort(({ status: a }, { status: b }) => {
-        if (a === b) return 0;
-        if (a === "online") return 1;
-        if (b === "online") return -1;
-        if (a === "idle") return 1;
-        if (b === "idle") return -1;
-        return 0;
-    });
-
-    // Get the most active status
-    const activeStatus = sortedSessions[0]?.status || "offline";
-
-    // Inject mod type into clientStatuses so other users can see it
-    const { clientStatuses } = PresenceStore.getState();
-    if (!clientStatuses[user.id]) {
-        clientStatuses[user.id] = {};
-    }
-    clientStatuses[user.id][modType] = activeStatus;
+    // Inject mod type into clientStatuses
+    injectModTypeIntoClientStatuses();
 }
 
 interface ModIndicatorProps {
@@ -199,7 +269,7 @@ const ModIndicator = ({ user, isProfile, isMessage, isMemberList }: ModIndicator
     const modType = detectModType(user.id);
     if (!modType) return null;
 
-    // Get user status for the mod type
+    // Get user status for the mod type from clientStatuses
     const status = useStateFromStores([PresenceStore], () => {
         const presence = PresenceStore.getState();
         const userStatus = presence?.clientStatuses?.[user.id];
@@ -290,13 +360,6 @@ export default definePlugin({
                 match: /(\[IDENTIFY\].*let.{0,5}=\{.*properties:)(.*),presence/,
                 replace: "$1{...$2,...$self.getModInfo()},presence"
             }
-        },
-        {
-            find: ".Masks.STATUS_ONLINE",
-            replacement: {
-                match: /(clientStatuses\[(\i)\.id\]\s*=\s*\{)/,
-                replace: "$1...$self.injectModStatus($2),"
-            }
         }
     ],
 
@@ -309,26 +372,48 @@ export default definePlugin({
         };
     },
 
-    injectModStatus(user: User) {
-        if (!user || user.id !== AuthenticationStore.getId()) {
-            return {};
-        }
-        const modType = getCurrentModType();
-        return {
-            [modType]: "online" // Inject mod type as a client status
-        };
-    },
-
     start() {
         if (settings.store.list) toggleMemberListDecorators(true);
         if (settings.store.profiles) toggleNicknameIcons(true);
         if (settings.store.messages) toggleMessageDecorators(true);
+
+        // Inject mod type immediately
+        injectModTypeIntoClientStatuses();
+
+        // Listen to presence updates to maintain mod type and detect others
+        const presenceListener = (event: any) => {
+            injectModTypeIntoClientStatuses();
+            
+            // Try to extract mod type from presence data
+            if (event?.user?.id && event?.user?.id !== AuthenticationStore.getId()) {
+                // Check if presence data contains mod info
+                const modType = detectModType(event.user.id);
+                if (modType) {
+                    setCachedModType(event.user.id, modType);
+                }
+            }
+        };
+
+        FluxDispatcher.subscribe("PRESENCE_UPDATE", presenceListener);
+        FluxDispatcher.subscribe("SESSIONS_REPLACE", presenceListener);
+        FluxDispatcher.subscribe("CONNECTION_OPEN", presenceListener);
+
+        // Store listener for cleanup
+        (this as any)._presenceListener = presenceListener;
     },
 
     stop() {
         if (settings.store.list) toggleMemberListDecorators(false);
         if (settings.store.profiles) toggleNicknameIcons(false);
         if (settings.store.messages) toggleMessageDecorators(false);
+
+        // Remove presence listener
+        const listener = (this as any)._presenceListener;
+        if (listener) {
+            FluxDispatcher.unsubscribe("PRESENCE_UPDATE", listener);
+            FluxDispatcher.unsubscribe("SESSIONS_REPLACE", listener);
+            FluxDispatcher.unsubscribe("CONNECTION_OPEN", listener);
+        }
     }
 });
 

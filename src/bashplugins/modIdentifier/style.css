@@ -3,16 +3,35 @@
     justify-content: center;
     align-items: center;
     gap: 2px;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.vc-mod-indicator:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
 }
 
 .vc-mod-indicator-profile {
-    margin: 0 1px;
-    padding: 0 1px;
+    margin: 0 2px;
+    padding: 0 2px;
+    border-radius: 3px;
 }
 
 .vc-mod-indicator-message {
     position: relative;
-    vertical-align: top;
-    top: -1px;
+    vertical-align: middle;
+    margin-left: 4px;
+    margin-right: 2px;
+    border-radius: 3px;
+    padding: 1px 2px;
+}
+
+.vc-mod-indicator svg {
+    transition: filter 0.2s ease;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+}
+
+.vc-mod-indicator:hover svg {
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
 }
 
