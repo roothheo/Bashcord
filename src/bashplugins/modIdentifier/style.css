@@ -1,0 +1,18 @@
+.vc-mod-indicator {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+}
+
+.vc-mod-indicator-profile {
+    margin: 0 1px;
+    padding: 0 1px;
+}
+
+.vc-mod-indicator-message {
+    position: relative;
+    vertical-align: top;
+    top: -1px;
+}
+
