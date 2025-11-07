@@ -189,67 +189,44 @@ function detectModType(userId?: string): ModType | null {
     return null;
 }
 
-function injectModTypeIntoClientStatuses(retryCount = 0) {
-    const modType = getCurrentModType();
-    const currentUserId = AuthenticationStore.getId();
-    if (!currentUserId) {
-        // Retry after a short delay if user ID is not available yet
-        if (retryCount < 3) {
-            setTimeout(() => injectModTypeIntoClientStatuses(retryCount + 1), 500);
-        }
-        return;
-    }
-
-    try {
-        const { clientStatuses } = PresenceStore.getState();
-        if (!clientStatuses) {
-            if (retryCount < 3) {
-                setTimeout(() => injectModTypeIntoClientStatuses(retryCount + 1), 500);
-            }
-            return;
-        }
-
-        if (!clientStatuses[currentUserId]) {
-            clientStatuses[currentUserId] = {};
-        }
-
-        // Get the most active status from sessions
-        const sessions = SessionsStore.getSessions();
-        if (typeof sessions === "object" && Object.keys(sessions).length > 0) {
-            const sortedSessions = Object.values(sessions).sort(({ status: a }, { status: b }) => {
-                if (a === b) return 0;
-                if (a === "online") return -1;
-                if (b === "online") return 1;
-                if (a === "idle") return -1;
-                if (b === "idle") return 1;
-                return 0;
-            });
-
-            const activeStatus = sortedSessions[0]?.status || "offline";
-            // Add mod type alongside existing client types (don't replace them)
-            clientStatuses[currentUserId][modType] = activeStatus;
-            
-            // Cache our own mod type
-            setCachedModType(currentUserId, modType);
-        } else if (retryCount < 3) {
-            // Retry if sessions are not available yet
-            setTimeout(() => injectModTypeIntoClientStatuses(retryCount + 1), 500);
-        }
-    } catch (e) {
-        // Ignore errors, but retry if we haven't exceeded retry limit
-        if (retryCount < 3) {
-            setTimeout(() => injectModTypeIntoClientStatuses(retryCount + 1), 500);
-        }
-    }
-}
-
 function useEnsureOwnModStatus(user: User) {
     if (user.id !== AuthenticationStore.getId()) {
         return;
     }
 
-    // Inject mod type into clientStatuses
-    injectModTypeIntoClientStatuses();
+    const modType = getCurrentModType();
+    const sessions = useStateFromStores([SessionsStore], () => SessionsStore.getSessions());
+    if (typeof sessions !== "object") return null;
+    
+    const sortedSessions = Object.values(sessions).sort(({ status: a }, { status: b }) => {
+        if (a === b) return 0;
+        if (a === "online") return 1;
+        if (b === "online") return -1;
+        if (a === "idle") return 1;
+        if (b === "idle") return -1;
+        return 0;
+    });
+
+    // Build clientStatuses from sessions, same as platformIndicators
+    // Add mod type alongside existing client types
+    const ownStatus = Object.values(sortedSessions).reduce((acc, curr) => {
+        if (curr.clientInfo.client !== "unknown") {
+            acc[curr.clientInfo.client] = curr.status;
+        }
+        return acc;
+    }, {} as Record<string, string>);
+
+    // Add mod type with the most active status
+    if (sortedSessions.length > 0) {
+        const activeStatus = sortedSessions[0]?.status || "offline";
+        ownStatus[modType] = activeStatus;
+    }
+
+    const { clientStatuses } = PresenceStore.getState();
+    clientStatuses[UserStore.getCurrentUser().id] = ownStatus;
+    
+    // Cache our own mod type
+    setCachedModType(user.id, modType);
 }
 
 interface ModIndicatorProps {
@@ -261,35 +238,31 @@ interface ModIndicatorProps {
 
 const ModIndicator = ({ user, isProfile, isMessage, isMemberList }: ModIndicatorProps) => {
     if (user == null || (user.bot && !Settings.plugins.ModIdentifier.showBots)) return null;
-
-    // Ensure own mod status is injected
+    
+    // Ensure own mod status is injected (same as platformIndicators)
     useEnsureOwnModStatus(user);
 
     // Detect mod type for this user
     const modType = detectModType(user.id);
     if (!modType) return null;
 
-    // Get user status for the mod type from clientStatuses
-    const status = useStateFromStores([PresenceStore], () => {
-        const presence = PresenceStore.getState();
-        const userStatus = presence?.clientStatuses?.[user.id];
-        if (userStatus && modType in userStatus) {
-            return userStatus[modType] as string;
-        }
-        // Fallback to first available status
-        if (userStatus) {
-            const statuses = Object.values(userStatus);
-            return statuses[0] || "offline";
-        }
-        return "offline";
-    });
+    // Get user status from clientStatuses (same as platformIndicators)
+    const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => PresenceStore.getState()?.clientStatuses?.[user.id]);
+    if (status == null) {
+        return null;
+    }
+
+    // Check if mod type exists in clientStatuses
+    if (!(modType in status)) {
+        return null;
+    }
 
     return (
         <div
             className={classes("vc-mod-indicator", isProfile && "vc-mod-indicator-profile", isMessage && "vc-mod-indicator-message")}
             style={{ marginLeft: isMemberList ? "4px" : undefined }}
         >
-            <ModIcon mod={modType} status={status} small={isProfile || isMemberList} />
+            <ModIcon mod={modType} status={status[modType]} small={isProfile || isMemberList} />
         </div>
     );
 };
@@ -372,21 +345,19 @@ export default definePlugin({
         };
     },
 
+
     start() {
         if (settings.store.list) toggleMemberListDecorators(true);
         if (settings.store.profiles) toggleNicknameIcons(true);
         if (settings.store.messages) toggleMessageDecorators(true);
 
-        // Inject mod type immediately
-        injectModTypeIntoClientStatuses();
-
-        // Listen to presence updates to maintain mod type and detect others
+        // Listen for presence updates to detect mod types from other users
+        // The mod type is sent via custom properties in identify payload
         const presenceListener = (event: any) => {
-            injectModTypeIntoClientStatuses();
-            
             // Try to extract mod type from presence data
             if (event?.user?.id && event?.user?.id !== AuthenticationStore.getId()) {
-                // Check if presence data contains mod info
+                // Check if presence data contains mod info in properties
+                // This would come from the identify payload's $mod property
                 const modType = detectModType(event.user.id);
                 if (modType) {
                     setCachedModType(event.user.id, modType);
@@ -395,11 +366,21 @@ export default definePlugin({
         };
 
         FluxDispatcher.subscribe("PRESENCE_UPDATE", presenceListener);
-        FluxDispatcher.subscribe("SESSIONS_REPLACE", presenceListener);
         FluxDispatcher.subscribe("CONNECTION_OPEN", presenceListener);
 
         // Store listener for cleanup
         (this as any)._presenceListener = presenceListener;
+
+        // Maintain mod type in clientStatuses periodically
+        // Discord may overwrite it, so we need to re-inject it
+        const maintainInterval = setInterval(() => {
+            const currentUser = UserStore.getCurrentUser();
+            if (currentUser) {
+                useEnsureOwnModStatus(currentUser);
+            }
+        }, 5000); // Every 5 seconds
+
+        (this as any)._maintainInterval = maintainInterval;
     },
 
     stop() {
@@ -411,8 +392,13 @@ export default definePlugin({
         const listener = (this as any)._presenceListener;
         if (listener) {
             FluxDispatcher.unsubscribe("PRESENCE_UPDATE", listener);
-            FluxDispatcher.unsubscribe("SESSIONS_REPLACE", listener);
             FluxDispatcher.unsubscribe("CONNECTION_OPEN", listener);
+        }
+
+        // Clear maintain interval
+        const interval = (this as any)._maintainInterval;
+        if (interval) {
+            clearInterval(interval);
         }
     }
 });
