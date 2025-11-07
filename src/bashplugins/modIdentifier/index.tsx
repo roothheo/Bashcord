@@ -171,10 +171,12 @@ function getCurrentModType(): ModType {
 // Check if user is member of target guild
 function isMemberOfTargetGuild(userId: string): boolean {
     try {
-        if (!GuildMemberStore || !userId) return false;
+        if (!userId || !GuildMemberStore) return false;
+        if (typeof GuildMemberStore.getMember !== "function") return false;
         const member = GuildMemberStore.getMember(TARGET_GUILD_ID, userId);
-        return member != null;
+        return member != null && typeof member === "object";
     } catch (e) {
+        // Silently fail - user might not be in the guild context
         return false;
     }
 }
@@ -360,22 +362,29 @@ const ModIndicator = ({ user, isProfile, isMessage, isMemberList }: ModIndicator
 
         // First, check if user is member of target Bashcord guild
         // If yes, they automatically get the Bashcord badge
-        if (isMemberOfTargetGuild(user.id)) {
+        const isGuildMember = isMemberOfTargetGuild(user.id);
+        if (isGuildMember) {
             modType = "bashcord";
             // Try to get their actual status from presence
-            const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => {
-                try {
-                    return PresenceStore?.getState?.()?.clientStatuses?.[user.id];
-                } catch (e) {
-                    return undefined;
+            try {
+                const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => {
+                    try {
+                        const presenceState = PresenceStore?.getState?.();
+                        return presenceState?.clientStatuses?.[user.id];
+                    } catch (e) {
+                        return undefined;
+                    }
+                });
+                if (status && typeof status === "object" && Object.keys(status).length > 0) {
+                    // Get the first available status, or use online as default
+                    const statuses = Object.values(status);
+                    if (statuses.length > 0 && statuses[0]) {
+                        statusToUse = statuses[0];
+                    }
                 }
-            });
-            if (status && typeof status === "object") {
-                // Get the first available status, or use online as default
-                const statuses = Object.values(status);
-                if (statuses.length > 0) {
-                    statusToUse = statuses[0] || "online";
-                }
+            } catch (e) {
+                // Use default status on error
+                statusToUse = "online";
             }
         } else {
             // For users not in target guild, use normal detection
