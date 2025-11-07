@@ -223,6 +223,14 @@ export default definePlugin({
                 match: /new \i\.\i\("Spotify"\)/,
                 replace: "$self.NoopLogger()"
             }
+        },
+        // Suppress KeybindsStore warnings
+        {
+            find: "Default overlay keybind is unsupported",
+            replacement: {
+                match: /console\.(warn|log)\([^)]*KeybindsStore[^)]*unsupported[^)]*\)/,
+                replace: "$self.Noop()"
+            }
         }
     ]
 });

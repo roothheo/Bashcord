@@ -80,6 +80,12 @@ export async function checkForUpdates() {
                         return (isOutdated = false);
                     }
 
+                    // Safety check for localStorage availability
+                    if (typeof localStorage === "undefined" || !localStorage) {
+                        UpdateLogger.warn("localStorage is not available, skipping timestamp comparison");
+                        return (isOutdated = changes.length > 0);
+                    }
+
                     const lastInstalledTimestamp = localStorage.getItem("bashcord-last-installed-timestamp");
                     
                     if (lastInstalledTimestamp) {
@@ -113,7 +119,9 @@ export async function checkForUpdates() {
                         const timeDiff = Math.abs(now - releaseTime);
                         if (timeDiff < 60 * 60 * 1000) { // 1 heure
                             UpdateLogger.info(`First check: release timestamp is recent (${Math.round(timeDiff / 1000 / 60)} minutes old), assuming up-to-date`);
-                            localStorage.setItem("bashcord-last-installed-timestamp", releaseTime.toString());
+                            if (typeof localStorage !== "undefined" && localStorage) {
+                                localStorage.setItem("bashcord-last-installed-timestamp", releaseTime.toString());
+                            }
                             return (isOutdated = false);
                         }
                         // Sinon, c'est probablement une nouvelle release

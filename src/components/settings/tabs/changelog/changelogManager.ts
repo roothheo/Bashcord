@@ -34,11 +34,11 @@ export interface UpdateSession {
 
 export type ChangelogHistory = UpdateSession[];
 
-const CHANGELOG_HISTORY_KEY = "EquicordChangelog_History";
-const LAST_SEEN_HASH_KEY = "EquicordChangelog_LastSeenHash";
-const KNOWN_PLUGINS_KEY = "EquicordChangelog_KnownPlugins";
-const KNOWN_SETTINGS_KEY = "EquicordChangelog_KnownSettings";
-const LAST_REPO_CHECK_KEY = "EquicordChangelog_LastRepoCheck";
+const CHANGELOG_HISTORY_KEY = "BashcordChangelog_History";
+const LAST_SEEN_HASH_KEY = "BashcordChangelog_LastSeenHash";
+const KNOWN_PLUGINS_KEY = "BashcordChangelog_KnownPlugins";
+const KNOWN_SETTINGS_KEY = "BashcordChangelog_KnownSettings";
+const LAST_REPO_CHECK_KEY = "BashcordChangelog_LastRepoCheck";
 const GITHUB_COMPARE_ENDPOINT = "https://api.github.com/repos";
 
 type KnownPluginSettingsMap = Map<string, Set<string>>;
@@ -71,7 +71,8 @@ async function fetchCommitsBetween(
             if (result.ok) {
                 return result.value as ChangelogEntry[];
             } else {
-                console.warn("Failed to fetch commits via IPC", result.error);
+                const errorMsg = result.error?.message || result.error?.toString() || JSON.stringify(result.error) || "Unknown error";
+                console.warn("Failed to fetch commits via IPC:", errorMsg);
                 return [];
             }
         } catch (err) {
