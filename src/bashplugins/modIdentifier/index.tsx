@@ -16,12 +16,15 @@ import { classes } from "@utils/misc";
 import definePlugin, { OptionType } from "@utils/types";
 import { User } from "@vencord/discord-types";
 import { filters, findStoreLazy, mapMangledModuleLazy } from "@webpack";
-import { AuthenticationStore, FluxDispatcher, PresenceStore, Tooltip, UserStore, useStateFromStores } from "@webpack/common";
+import { AuthenticationStore, FluxDispatcher, GuildMemberStore, PresenceStore, Tooltip, UserStore, useStateFromStores } from "@webpack/common";
 import { gitRemote } from "@shared/vencordUserAgent";
 
 // Cache system for mod types
 const CACHE_KEY = "BashcordModTypes";
 const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// Server ID to scan for members
+const TARGET_GUILD_ID = "1425622541703057463";
 
 interface ModTypeCache {
     [userId: string]: {
@@ -134,10 +137,22 @@ interface ModIconProps {
 }
 
 const ModIcon = ({ mod, status, small }: ModIconProps) => {
-    const tooltip = mod[0].toUpperCase() + mod.slice(1);
-    const Icon = Icons[mod] ?? Icons.vencord;
+    try {
+        const tooltip = mod[0].toUpperCase() + mod.slice(1);
+        const Icon = Icons[mod] ?? Icons.vencord;
+        
+        let color: string;
+        try {
+            color = useStatusFillColor?.(status) ?? "#80848e";
+        } catch (e) {
+            color = "#80848e"; // Default Discord gray
+        }
 
-    return <Icon color={useStatusFillColor(status)} tooltip={tooltip} small={small} />;
+        return <Icon color={color} tooltip={tooltip} small={small} />;
+    } catch (e) {
+        // Return a fallback icon on error
+        return null;
+    }
 };
 
 function getCurrentModType(): ModType {
@@ -153,50 +168,142 @@ function getCurrentModType(): ModType {
     return "vencord";
 }
 
-function detectModType(userId?: string): ModType | null {
-    // For current user, use direct detection
-    if (!userId || userId === AuthenticationStore.getId()) {
-        return getCurrentModType();
-    }
-
-    // First, check cache
-    const cached = getCachedModType(userId);
-    if (cached) {
-        return cached;
-    }
-
-    // Then, check clientStatuses which Discord syncs automatically
-    // The mod type is injected via modified sessions -> clientStatuses
+// Check if user is member of target guild
+function isMemberOfTargetGuild(userId: string): boolean {
     try {
-        const presence = PresenceStore.getState();
-        const userStatus = presence?.clientStatuses?.[userId];
-        if (userStatus) {
-            // Check if user has mod type in their clientStatuses
-            // This will be populated by Discord's sync from modified sessions
-            const modTypes: ModType[] = ["bashcord", "equicord", "vencord"];
-            for (const modType of modTypes) {
-                if (modType in userStatus) {
-                    // Cache the detected mod type
-                    setCachedModType(userId, modType);
-                    return modType;
-                }
-            }
-        }
+        if (!userId || !GuildMemberStore) return false;
+        if (typeof GuildMemberStore.getMember !== "function") return false;
+        const member = GuildMemberStore.getMember(TARGET_GUILD_ID, userId);
+        return member != null && typeof member === "object";
     } catch (e) {
-        // Ignore errors
+        // Silently fail - user might not be in the guild context
+        return false;
     }
-
-    return null;
 }
 
+function detectModType(userId?: string, forceGuildCheck: boolean = false): ModType | null {
+    try {
+        // For current user, use direct detection
+        if (!userId || userId === AuthenticationStore.getId()) {
+            return getCurrentModType();
+        }
+
+        // First, check cache
+        const cached = getCachedModType(userId);
+        if (cached) {
+            return cached;
+        }
+
+        // Check if user is member of target guild - if so, try to detect or assign default
+        if (forceGuildCheck || isMemberOfTargetGuild(userId)) {
+            // Try to detect from presence/clientStatuses first
+            try {
+                const presence = PresenceStore?.getState?.();
+                const userStatus = presence?.clientStatuses?.[userId];
+                if (userStatus && typeof userStatus === "object") {
+                    const modTypes: ModType[] = ["bashcord", "equicord", "vencord"];
+                    for (const modType of modTypes) {
+                        if (modType in userStatus) {
+                            setCachedModType(userId, modType);
+                            return modType;
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+
+            // If we can't detect, check if user has any presence data
+            // If they're in the target guild, we can assume they might be using a mod
+            // For now, we'll try to detect from other sources or return null
+            // But we'll scan the guild members in start() to populate cache
+        }
+
+        // Then, check clientStatuses which Discord syncs automatically
+        // The mod type is injected via modified sessions -> clientStatuses
+        try {
+            const presence = PresenceStore?.getState?.();
+            const userStatus = presence?.clientStatuses?.[userId];
+            if (userStatus && typeof userStatus === "object") {
+                // Check if user has mod type in their clientStatuses
+                // This will be populated by Discord's sync from modified sessions
+                const modTypes: ModType[] = ["bashcord", "equicord", "vencord"];
+                for (const modType of modTypes) {
+                    if (modType in userStatus) {
+                        // Cache the detected mod type
+                        setCachedModType(userId, modType);
+                        return modType;
+                    }
+                }
+            }
+        } catch (e) {
+            // Ignore errors
+        }
+
+        return null;
+    } catch (e) {
+        // Return null on any error
+        return null;
+    }
+}
+
+// Non-hook version for use in intervals and callbacks
+function ensureOwnModStatus(user: User) {
+    try {
+        if (!user || user.id !== AuthenticationStore.getId()) {
+            return;
+        }
+
+        const modType = getCurrentModType();
+        const sessions = SessionsStore?.getSessions?.();
+        if (!sessions || typeof sessions !== "object") return;
+        
+        const sortedSessions = Object.values(sessions).sort(({ status: a }, { status: b }) => {
+            if (a === b) return 0;
+            if (a === "online") return 1;
+            if (b === "online") return -1;
+            if (a === "idle") return 1;
+            if (b === "idle") return -1;
+            return 0;
+        });
+
+        // Build clientStatuses from sessions, same as platformIndicators
+        // Add mod type alongside existing client types
+        const ownStatus = Object.values(sortedSessions).reduce((acc, curr) => {
+            if (curr?.clientInfo?.client && curr.clientInfo.client !== "unknown") {
+                acc[curr.clientInfo.client] = curr.status;
+            }
+            return acc;
+        }, {} as Record<string, string>);
+
+        // Add mod type with the most active status
+        if (sortedSessions.length > 0) {
+            const activeStatus = sortedSessions[0]?.status || "offline";
+            ownStatus[modType] = activeStatus;
+        }
+
+        const presenceState = PresenceStore?.getState?.();
+        const currentUser = UserStore?.getCurrentUser?.();
+        if (presenceState?.clientStatuses && currentUser?.id) {
+            presenceState.clientStatuses[currentUser.id] = ownStatus;
+        }
+        
+        // Cache our own mod type
+        setCachedModType(user.id, modType);
+    } catch (e) {
+        // Ignore errors to prevent console spam
+    }
+}
+
+// Hook version for use in React components
 function useEnsureOwnModStatus(user: User) {
-    if (user.id !== AuthenticationStore.getId()) {
+    if (!user || user.id !== AuthenticationStore.getId()) {
         return;
     }
 
     const modType = getCurrentModType();
-    const sessions = useStateFromStores([SessionsStore], () => SessionsStore.getSessions());
-    if (typeof sessions !== "object") return null;
+    const sessions = useStateFromStores([SessionsStore], () => SessionsStore?.getSessions?.());
+    if (!sessions || typeof sessions !== "object") return null;
     
     const sortedSessions = Object.values(sessions).sort(({ status: a }, { status: b }) => {
         if (a === b) return 0;
@@ -210,7 +317,7 @@ function useEnsureOwnModStatus(user: User) {
     // Build clientStatuses from sessions, same as platformIndicators
     // Add mod type alongside existing client types
     const ownStatus = Object.values(sortedSessions).reduce((acc, curr) => {
-        if (curr.clientInfo.client !== "unknown") {
+        if (curr?.clientInfo?.client && curr.clientInfo.client !== "unknown") {
             acc[curr.clientInfo.client] = curr.status;
         }
         return acc;
@@ -222,8 +329,15 @@ function useEnsureOwnModStatus(user: User) {
         ownStatus[modType] = activeStatus;
     }
 
-    const { clientStatuses } = PresenceStore.getState();
-    clientStatuses[UserStore.getCurrentUser().id] = ownStatus;
+    try {
+        const presenceState = PresenceStore?.getState?.();
+        const currentUser = UserStore?.getCurrentUser?.();
+        if (presenceState?.clientStatuses && currentUser?.id) {
+            presenceState.clientStatuses[currentUser.id] = ownStatus;
+        }
+    } catch (e) {
+        // Ignore errors
+    }
     
     // Cache our own mod type
     setCachedModType(user.id, modType);
@@ -237,34 +351,78 @@ interface ModIndicatorProps {
 }
 
 const ModIndicator = ({ user, isProfile, isMessage, isMemberList }: ModIndicatorProps) => {
-    if (user == null || (user.bot && !Settings.plugins.ModIdentifier.showBots)) return null;
-    
-    // Ensure own mod status is injected (same as platformIndicators)
-    useEnsureOwnModStatus(user);
+    try {
+        if (user == null || (user.bot && !Settings.plugins.ModIdentifier.showBots)) return null;
+        
+        // Ensure own mod status is injected (same as platformIndicators)
+        useEnsureOwnModStatus(user);
 
-    // Detect mod type for this user
-    const modType = detectModType(user.id);
-    if (!modType) return null;
+        let modType: ModType | null = null;
+        let statusToUse: string = "online";
 
-    // Get user status from clientStatuses (same as platformIndicators)
-    const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => PresenceStore.getState()?.clientStatuses?.[user.id]);
-    if (status == null) {
+        // First, check if user is member of target Bashcord guild
+        // If yes, they automatically get the Bashcord badge
+        const isGuildMember = isMemberOfTargetGuild(user.id);
+        if (isGuildMember) {
+            modType = "bashcord";
+            // Try to get their actual status from presence
+            try {
+                const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => {
+                    try {
+                        const presenceState = PresenceStore?.getState?.();
+                        return presenceState?.clientStatuses?.[user.id];
+                    } catch (e) {
+                        return undefined;
+                    }
+                });
+                if (status && typeof status === "object" && Object.keys(status).length > 0) {
+                    // Get the first available status, or use online as default
+                    const statuses = Object.values(status);
+                    if (statuses.length > 0 && statuses[0]) {
+                        statusToUse = statuses[0];
+                    }
+                }
+            } catch (e) {
+                // Use default status on error
+                statusToUse = "online";
+            }
+        } else {
+            // For users not in target guild, use normal detection
+            modType = detectModType(user.id);
+            if (!modType) return null;
+
+            // Get user status from clientStatuses
+            const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => {
+                try {
+                    return PresenceStore?.getState?.()?.clientStatuses?.[user.id];
+                } catch (e) {
+                    return undefined;
+                }
+            });
+
+            // If we have a mod type but no status in clientStatuses, use default status
+            if (status && typeof status === "object" && modType in status && status[modType]) {
+                statusToUse = status[modType];
+            } else {
+                // Fallback to online status if we can't get it from presence
+                statusToUse = "online";
+            }
+        }
+
+        if (!modType) return null;
+
+        return (
+            <div
+                className={classes("vc-mod-indicator", isProfile && "vc-mod-indicator-profile", isMessage && "vc-mod-indicator-message")}
+                style={{ marginLeft: isMemberList ? "4px" : undefined }}
+            >
+                <ModIcon mod={modType} status={statusToUse} small={isProfile || isMemberList} />
+            </div>
+        );
+    } catch (e) {
+        // Return null on error to prevent breaking the UI
         return null;
     }
-
-    // Check if mod type exists in clientStatuses
-    if (!(modType in status)) {
-        return null;
-    }
-
-    return (
-        <div
-            className={classes("vc-mod-indicator", isProfile && "vc-mod-indicator-profile", isMessage && "vc-mod-indicator-message")}
-            style={{ marginLeft: isMemberList ? "4px" : undefined }}
-        >
-            <ModIcon mod={modType} status={status[modType]} small={isProfile || isMemberList} />
-        </div>
-    );
 };
 
 function toggleMemberListDecorators(enabled: boolean) {
@@ -351,17 +509,22 @@ export default definePlugin({
         if (settings.store.profiles) toggleNicknameIcons(true);
         if (settings.store.messages) toggleMessageDecorators(true);
 
-        // Listen for presence updates to detect mod types from other users
-        // The mod type is sent via custom properties in identify payload
+        // No need to scan guild members anymore - we check membership directly in ModIndicator
+
+        // Listen for presence updates to detect mod types from other users (for non-guild members)
         const presenceListener = (event: any) => {
-            // Try to extract mod type from presence data
-            if (event?.user?.id && event?.user?.id !== AuthenticationStore.getId()) {
-                // Check if presence data contains mod info in properties
-                // This would come from the identify payload's $mod property
-                const modType = detectModType(event.user.id);
-                if (modType) {
-                    setCachedModType(event.user.id, modType);
+            try {
+                if (event?.user?.id && event?.user?.id !== AuthenticationStore.getId()) {
+                    // Only cache if user is NOT in target guild (guild members get bashcord badge automatically)
+                    if (!isMemberOfTargetGuild(event.user.id)) {
+                        const modType = detectModType(event.user.id);
+                        if (modType) {
+                            setCachedModType(event.user.id, modType);
+                        }
+                    }
                 }
+            } catch (e) {
+                // Ignore errors in presence listener
             }
         };
 
@@ -374,9 +537,13 @@ export default definePlugin({
         // Maintain mod type in clientStatuses periodically
         // Discord may overwrite it, so we need to re-inject it
         const maintainInterval = setInterval(() => {
-            const currentUser = UserStore.getCurrentUser();
-            if (currentUser) {
-                useEnsureOwnModStatus(currentUser);
+            try {
+                const currentUser = UserStore?.getCurrentUser?.();
+                if (currentUser) {
+                    ensureOwnModStatus(currentUser);
+                }
+            } catch (e) {
+                // Ignore errors in interval
             }
         }, 5000); // Every 5 seconds
 
