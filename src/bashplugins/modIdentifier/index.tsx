@@ -355,47 +355,52 @@ const ModIndicator = ({ user, isProfile, isMessage, isMemberList }: ModIndicator
         // Ensure own mod status is injected (same as platformIndicators)
         useEnsureOwnModStatus(user);
 
-        // Detect mod type for this user - check guild membership for target guild
-        const modType = detectModType(user.id, true);
-        if (!modType) {
-            // If no mod type detected but user is in target guild, try to show badge anyway
-            // by checking cache or presence
-            if (isMemberOfTargetGuild(user.id)) {
-                // Try one more time with guild check
-                const cached = getCachedModType(user.id);
-                if (cached) {
-                    // Use cached mod type and show with default status
-                    const defaultStatus = "online";
-                    return (
-                        <div
-                            className={classes("vc-mod-indicator", isProfile && "vc-mod-indicator-profile", isMessage && "vc-mod-indicator-message")}
-                            style={{ marginLeft: isMemberList ? "4px" : undefined }}
-                        >
-                            <ModIcon mod={cached} status={defaultStatus} small={isProfile || isMemberList} />
-                        </div>
-                    );
+        let modType: ModType | null = null;
+        let statusToUse: string = "online";
+
+        // First, check if user is member of target Bashcord guild
+        // If yes, they automatically get the Bashcord badge
+        if (isMemberOfTargetGuild(user.id)) {
+            modType = "bashcord";
+            // Try to get their actual status from presence
+            const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => {
+                try {
+                    return PresenceStore?.getState?.()?.clientStatuses?.[user.id];
+                } catch (e) {
+                    return undefined;
+                }
+            });
+            if (status && typeof status === "object") {
+                // Get the first available status, or use online as default
+                const statuses = Object.values(status);
+                if (statuses.length > 0) {
+                    statusToUse = statuses[0] || "online";
                 }
             }
-            return null;
-        }
-
-        // Get user status from clientStatuses (same as platformIndicators)
-        const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => {
-            try {
-                return PresenceStore?.getState?.()?.clientStatuses?.[user.id];
-            } catch (e) {
-                return undefined;
-            }
-        });
-
-        // If we have a mod type but no status in clientStatuses, use default status
-        let statusToUse: string;
-        if (status && typeof status === "object" && modType in status && status[modType]) {
-            statusToUse = status[modType];
         } else {
-            // Fallback to online status if we can't get it from presence
-            statusToUse = "online";
+            // For users not in target guild, use normal detection
+            modType = detectModType(user.id);
+            if (!modType) return null;
+
+            // Get user status from clientStatuses
+            const status: Record<string, string> | undefined = useStateFromStores([PresenceStore], () => {
+                try {
+                    return PresenceStore?.getState?.()?.clientStatuses?.[user.id];
+                } catch (e) {
+                    return undefined;
+                }
+            });
+
+            // If we have a mod type but no status in clientStatuses, use default status
+            if (status && typeof status === "object" && modType in status && status[modType]) {
+                statusToUse = status[modType];
+            } else {
+                // Fallback to online status if we can't get it from presence
+                statusToUse = "online";
+            }
         }
+
+        if (!modType) return null;
 
         return (
             <div
@@ -495,106 +500,17 @@ export default definePlugin({
         if (settings.store.profiles) toggleNicknameIcons(true);
         if (settings.store.messages) toggleMessageDecorators(true);
 
-        // Function to scan guild members and detect mod types
-        const scanGuildMembers = () => {
-            try {
-                if (!GuildMemberStore) return;
-                
-                // Get all members of the target guild
-                const members = GuildMemberStore.getMembers(TARGET_GUILD_ID);
-                if (!members || typeof members !== "object") return;
+        // No need to scan guild members anymore - we check membership directly in ModIndicator
 
-                let scannedCount = 0;
-                let detectedCount = 0;
-
-                // Iterate through all members
-                for (const [userId, member] of Object.entries(members)) {
-                    if (!userId || !member) continue;
-                    scannedCount++;
-
-                    // Skip current user (already handled)
-                    if (userId === AuthenticationStore.getId()) continue;
-
-                    // Check if already cached
-                    if (getCachedModType(userId)) {
-                        detectedCount++;
-                        continue;
-                    }
-
-                    // Try to detect mod type
-                    const modType = detectModType(userId, false);
-                    if (modType) {
-                        setCachedModType(userId, modType);
-                        detectedCount++;
-                    } else {
-                        // Check presence for mod type indicators
-                        try {
-                            const presence = PresenceStore?.getState?.();
-                            const userStatus = presence?.clientStatuses?.[userId];
-                            if (userStatus && typeof userStatus === "object") {
-                                const modTypes: ModType[] = ["bashcord", "equicord", "vencord"];
-                                for (const mt of modTypes) {
-                                    if (mt in userStatus) {
-                                        setCachedModType(userId, mt);
-                                        detectedCount++;
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            // Ignore errors
-                        }
-                    }
-                }
-
-                console.log(`[ModIdentifier] Scanned ${scannedCount} members, detected ${detectedCount} mod types`);
-            } catch (e) {
-                // Ignore errors
-            }
-        };
-
-        // Scan guild members on start (with delay to ensure stores are ready)
-        setTimeout(() => {
-            scanGuildMembers();
-        }, 2000);
-
-        // Scan periodically to catch new members
-        const scanInterval = setInterval(() => {
-            scanGuildMembers();
-        }, 30000); // Every 30 seconds
-
-        (this as any)._scanInterval = scanInterval;
-
-        // Listen for presence updates to detect mod types from other users
-        // The mod type is sent via custom properties in identify payload
+        // Listen for presence updates to detect mod types from other users (for non-guild members)
         const presenceListener = (event: any) => {
             try {
-                // Try to extract mod type from presence data
                 if (event?.user?.id && event?.user?.id !== AuthenticationStore.getId()) {
-                    // Check if presence data contains mod info in properties
-                    // This would come from the identify payload's $mod property
-                    const modType = detectModType(event.user.id, false);
-                    if (modType) {
-                        setCachedModType(event.user.id, modType);
-                    } else {
-                        // Also check if user is in target guild and try to detect
-                        if (isMemberOfTargetGuild(event.user.id)) {
-                            // Try to detect from presence
-                            try {
-                                const presence = PresenceStore?.getState?.();
-                                const userStatus = presence?.clientStatuses?.[event.user.id];
-                                if (userStatus && typeof userStatus === "object") {
-                                    const modTypes: ModType[] = ["bashcord", "equicord", "vencord"];
-                                    for (const mt of modTypes) {
-                                        if (mt in userStatus) {
-                                            setCachedModType(event.user.id, mt);
-                                            break;
-                                        }
-                                    }
-                                }
-                            } catch (e) {
-                                // Ignore errors
-                            }
+                    // Only cache if user is NOT in target guild (guild members get bashcord badge automatically)
+                    if (!isMemberOfTargetGuild(event.user.id)) {
+                        const modType = detectModType(event.user.id);
+                        if (modType) {
+                            setCachedModType(event.user.id, modType);
                         }
                     }
                 }
@@ -605,8 +521,6 @@ export default definePlugin({
 
         FluxDispatcher.subscribe("PRESENCE_UPDATE", presenceListener);
         FluxDispatcher.subscribe("CONNECTION_OPEN", presenceListener);
-        FluxDispatcher.subscribe("GUILD_MEMBER_ADD", presenceListener);
-        FluxDispatcher.subscribe("GUILD_MEMBER_UPDATE", presenceListener);
 
         // Store listener for cleanup
         (this as any)._presenceListener = presenceListener;
@@ -637,14 +551,6 @@ export default definePlugin({
         if (listener) {
             FluxDispatcher.unsubscribe("PRESENCE_UPDATE", listener);
             FluxDispatcher.unsubscribe("CONNECTION_OPEN", listener);
-            FluxDispatcher.unsubscribe("GUILD_MEMBER_ADD", listener);
-            FluxDispatcher.unsubscribe("GUILD_MEMBER_UPDATE", listener);
-        }
-
-        // Clear scan interval
-        const scanInterval = (this as any)._scanInterval;
-        if (scanInterval) {
-            clearInterval(scanInterval);
         }
 
         // Clear maintain interval
