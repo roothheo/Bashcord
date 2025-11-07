@@ -7,10 +7,10 @@
 import { definePluginSettings } from "@api/Settings";
 import { Devs } from "@utils/constants";
 import definePlugin, { OptionType } from "@utils/types";
-import { RestAPI, UserStore, Constants } from "@webpack/common";
+import { FluxDispatcher, RestAPI, UserStore, Constants } from "@webpack/common";
 import { findByPropsLazy } from "@webpack";
 
-const MessageActions = findByPropsLazy("deleteMessage", "startEditMessage");
+const MessageActions = findByPropsLazy("deleteMessage", "startEditMessage", "_sendMessage");
 
 const settings = definePluginSettings({
     enabled: {
@@ -46,55 +46,98 @@ async function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function messageSendWrapper(content: string, nonce: string, channelId: string) {
-    const wrapperResponse = await RestAPI.post({
-        url: Constants.Endpoints.MESSAGES(channelId),
-        body: {
-            content: content,
-            flags: 0,
-            mobile_network_type: "unknown",
-            nonce: nonce,
-            tts: false,
+async function sendReplacementMessage(channelId: string, content: string, nonce: string): Promise<string | null> {
+    if (!MessageActions?._sendMessage) {
+        console.error("[DoubleClickAntiLog] MessageActions._sendMessage n'est pas disponible");
+        return null;
+    }
+
+    return new Promise((resolve) => {
+        // Écouter MESSAGE_CREATE pour récupérer l'ID du message de remplacement
+        const messageCreateListener = (event: any) => {
+            const message = event?.message;
+            if (message && message.channel_id === channelId && message.nonce === nonce) {
+                FluxDispatcher.unsubscribe("MESSAGE_CREATE", messageCreateListener);
+                resolve(message.id);
+            }
+        };
+
+        FluxDispatcher.subscribe("MESSAGE_CREATE", messageCreateListener);
+
+        // Timeout après 5 secondes pour éviter d'attendre indéfiniment
+        setTimeout(() => {
+            FluxDispatcher.unsubscribe("MESSAGE_CREATE", messageCreateListener);
+            resolve(null);
+        }, 5000);
+
+        try {
+            // Utiliser _sendMessage avec le nonce pour remplacer le message dans cacheSentMessages
+            MessageActions._sendMessage(channelId, {
+                content: content,
+                tts: false,
+                invalidEmojis: [],
+                validNonShortcutEmojis: []
+            }, { nonce: nonce });
+        } catch (error) {
+            FluxDispatcher.unsubscribe("MESSAGE_CREATE", messageCreateListener);
+            console.error("[DoubleClickAntiLog] Erreur lors de l'envoi du message de remplacement:", error);
+            resolve(null);
         }
     });
-    return wrapperResponse;
 }
 
-async function messageDeleteWrapper(channelId: string, messageId: string) {
-    return MessageActions.deleteMessage(channelId, messageId);
+function messageDeleteWrapper(channelId: string, messageId: string) {
+    if (!MessageActions?.deleteMessage) {
+        console.error("[DoubleClickAntiLog] MessageActions.deleteMessage n'est pas disponible");
+        return;
+    }
+    try {
+        MessageActions.deleteMessage(channelId, messageId);
+    } catch (error) {
+        console.error("[DoubleClickAntiLog] Erreur lors de la suppression:", error);
+    }
 }
 
 async function performAntiLogDeletion(messageId: string, channelId: string, blockMessage: string, deleteInterval: number) {
     try {
-        // Délai aléatoire pour éviter les rate limits
-        const randomDelay = Math.random() * 500 + 1000; // 1000-1500ms
-        await sleep(randomDelay);
+        // Vérifier que MessageActions est disponible
+        if (!MessageActions?.deleteMessage || !MessageActions?._sendMessage) {
+            console.error("[DoubleClickAntiLog] MessageActions n'est pas disponible");
+            return false;
+        }
 
-        // Envoyer un message de remplacement
-        const buggedMsgResponse = await messageSendWrapper(
-            blockMessage,
-            messageId,
-            channelId
-        );
-        const buggedMsgId = buggedMsgResponse.body.id;
+        // ÉTAPE 1: Dispatcher MESSAGE_DELETE avec mlDeleted: true pour que MessageLogger et MessageLoggerEnhanced ignorent le message
+        FluxDispatcher.dispatch({
+            type: "MESSAGE_DELETE",
+            channelId: channelId,
+            id: messageId,
+            mlDeleted: true
+        });
 
-        // Délai entre les suppressions
-        const deleteDelay = Math.max(deleteInterval, 3000); // Minimum 3 secondes
+        // Petit délai pour que l'événement soit traité
+        await sleep(100);
+
+        // ÉTAPE 2: Envoyer un message de remplacement avec le même nonce que le message original
+        // Cela remplace le message dans le cache de MessageLoggerEnhanced (cacheSentMessages) grâce au glitch du nonce
+        const replacementMessageId = await sendReplacementMessage(channelId, blockMessage, messageId);
+
+        // Délai entre l'envoi et la suppression (réduit à 1 seconde minimum)
+        const deleteDelay = Math.max(deleteInterval, 1000); // Minimum 1 seconde
         await sleep(deleteDelay);
 
-        // Supprimer le message original
-        await messageDeleteWrapper(channelId, messageId);
+        // ÉTAPE 3: Supprimer le message original
+        messageDeleteWrapper(channelId, messageId);
 
-        // Attendre le délai configuré
-        await sleep(deleteDelay);
-
-        // Supprimer le message de remplacement
-        await messageDeleteWrapper(channelId, buggedMsgId);
+        // ÉTAPE 4: Supprimer le message de remplacement après un délai
+        if (replacementMessageId) {
+            await sleep(deleteDelay);
+            messageDeleteWrapper(channelId, replacementMessageId);
+        }
 
         return true;
     } catch (error) {
         console.error("[DoubleClickAntiLog] Erreur lors de la suppression AntiLog:", error);
-        throw error;
+        return false;
     }
 }
 
@@ -106,43 +149,50 @@ export default definePlugin({
     settings,
 
     onMessageClick(msg: any, channel: any, event: MouseEvent) {
-        // Vérifier si le plugin est activé
-        if (!settings.store.enabled) return;
+        try {
+            // Vérifier si le plugin est activé
+            if (!settings.store.enabled) return;
 
-        // Vérifier si c'est un double-clic
-        if (event.detail !== 2) return;
+            // Vérifier si c'est un double-clic
+            if (!event || event.detail !== 2) return;
 
-        // Vérifier si un modificateur est requis
-        if (settings.store.requireModifier && !event.ctrlKey && !event.shiftKey) return;
+            // Vérifier si un modificateur est requis
+            if (settings.store.requireModifier && !event.ctrlKey && !event.shiftKey) return;
 
-        // Vérifier si c'est notre message
-        const currentUser = UserStore.getCurrentUser();
-        if (!currentUser || !msg.author || msg.author.id !== currentUser.id) return;
+            // Vérifier que le message et le canal sont valides
+            if (!msg || !channel || !msg.id || !channel.id) return;
 
-        // Vérifier que le message n'est pas déjà supprimé
-        if (msg.deleted === true) return;
+            // Vérifier si c'est notre message
+            const currentUser = UserStore.getCurrentUser();
+            if (!currentUser || !msg.author || msg.author.id !== currentUser.id) return;
 
-        // Vérifier que le message est envoyé
-        if (msg.state !== "SENT") return;
+            // Vérifier que le message n'est pas déjà supprimé
+            if (msg.deleted === true) return;
 
-        // Empêcher le comportement par défaut
-        event.preventDefault();
-        event.stopPropagation();
+            // Vérifier que le message est envoyé
+            if (msg.state !== "SENT") return;
 
-        // Afficher une notification si activée
-        if (settings.store.showNotification) {
-            console.log(`[DoubleClickAntiLog] Suppression AntiLog du message ${msg.id}`);
+            // Empêcher le comportement par défaut
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Afficher une notification si activée
+            if (settings.store.showNotification) {
+                console.log(`[DoubleClickAntiLog] Suppression AntiLog du message ${msg.id}`);
+            }
+
+            // Effectuer la suppression AntiLog de manière asynchrone
+            performAntiLogDeletion(
+                msg.id,
+                channel.id,
+                settings.store.blockMessage,
+                settings.store.deleteInterval
+            ).catch(error => {
+                console.error("[DoubleClickAntiLog] Erreur lors de la suppression:", error);
+            });
+        } catch (error) {
+            console.error("[DoubleClickAntiLog] Erreur dans onMessageClick:", error);
         }
-
-        // Effectuer la suppression AntiLog de manière asynchrone
-        performAntiLogDeletion(
-            msg.id,
-            channel.id,
-            settings.store.blockMessage,
-            settings.store.deleteInterval
-        ).catch(error => {
-            console.error("[DoubleClickAntiLog] Erreur lors de la suppression:", error);
-        });
     }
 });
 
